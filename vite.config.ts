@@ -18,6 +18,18 @@ export default defineConfig(async ({ mode }) => {
   process.env.WRANGLER_LOG_PATH ??= ".wrangler/logs";
   process.env.MINIFLARE_REGISTRY_PATH ??= ".wrangler/registry";
   const localEnv = loadEnv(mode, process.cwd(), "");
+  const d1DatabaseId =
+    process.env.YINGZO_D1_DATABASE_ID ??
+    localEnv.YINGZO_D1_DATABASE_ID ??
+    SITE_CREATOR_PLACEHOLDER_DATABASE_ID;
+  const d1DatabaseName =
+    process.env.YINGZO_D1_DATABASE_NAME ??
+    localEnv.YINGZO_D1_DATABASE_NAME ??
+    "site-creator-d1";
+  const r2BucketName =
+    process.env.YINGZO_R2_BUCKET_NAME ??
+    localEnv.YINGZO_R2_BUCKET_NAME ??
+    "site-creator-r2";
   const workerVars = Object.fromEntries(
     [
       "VIDEO_PROVIDER",
@@ -43,8 +55,8 @@ export default defineConfig(async ({ mode }) => {
       ? [
           {
             binding: d1,
-            database_name: "site-creator-d1",
-            database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+            database_name: d1DatabaseName,
+            database_id: d1DatabaseId,
           },
         ]
       : [],
@@ -52,7 +64,7 @@ export default defineConfig(async ({ mode }) => {
       ? [
           {
             binding: r2,
-            bucket_name: "site-creator-r2",
+            bucket_name: r2BucketName,
           },
         ]
       : [],

@@ -94,6 +94,18 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 - `npm test`: build the starter and verify its rendered loading skeleton
 - `npm run db:generate`: generate Drizzle migrations after schema changes
 
+## Cloudflare Git Deployment
+
+Set these non-secret variables in the Cloudflare build environment before deploying:
+
+```text
+YINGZO_D1_DATABASE_ID=<D1 database UUID>
+YINGZO_D1_DATABASE_NAME=site-creator-d1
+YINGZO_R2_BUCKET_NAME=site-creator-r2
+```
+
+The D1 and R2 runtime binding names remain `DB` and `MEDIA`. Configure Seedance credentials separately under Worker runtime variables and secrets; never commit `.env.local`.
+
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
