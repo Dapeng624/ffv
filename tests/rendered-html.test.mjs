@@ -21,11 +21,11 @@ test("server-renders the Yingzo marketing home", async () => {
 
   const html = await response.text();
   assert.match(html, /映作 YINGZO - AI 视频生成工作台/);
-  assert.match(html, /让每一张图片/);
-  assert.match(html, /核心特性/);
-  assert.match(html, /使用方法/);
-  assert.match(html, /应用场景/);
-  assert.match(html, /常见问题/);
+  assert.match(html, /Seedance 2\.5/);
+  assert.match(html, /今天，想创作什么/);
+  assert.match(html, /文生视频/);
+  assert.match(html, /图生视频/);
+  assert.match(html, /正在流行/);
   assert.match(html, /href="\/studio"/);
 });
 
