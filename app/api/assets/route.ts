@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { assets } from "@/db/schema";
 import { ensureCoreSchema, getDb } from "@/db";
+import { requireUser } from "@/lib/auth";
 import { attachGuestCookie, getGuestWorkspace } from "@/lib/guest-workspace";
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
   const guest = getGuestWorkspace(request);
   try {
     await ensureCoreSchema();
+    const user = await requireUser(request);
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return jsonError("FILE_REQUIRED", "请选择要上传的文件", 400, guest);
@@ -23,18 +25,18 @@ export async function POST(request: Request) {
 
     const id = crypto.randomUUID();
     const extension = safeExtension(file.name, kind);
-    const objectKey = `guests/${guest.id}/${id}.${extension}`;
+    const objectKey = `users/${user.id}/${id}.${extension}`;
     const media = (env as unknown as { MEDIA: R2Bucket }).MEDIA;
     if (!media) throw new Error("MEDIA_BUCKET_UNAVAILABLE");
 
     await media.put(objectKey, file.stream(), {
       httpMetadata: { contentType: file.type },
-      customMetadata: { guestId: guest.id, originalName: file.name.slice(0, 180) },
+      customMetadata: { userId: user.id, originalName: file.name.slice(0, 180) },
     });
 
     await getDb().insert(assets).values({
       id,
-      guestId: guest.id,
+      guestId: user.id,
       objectKey,
       fileName: file.name.slice(0, 180),
       contentType: file.type,
@@ -47,7 +49,9 @@ export async function POST(request: Request) {
       guest,
     );
   } catch (error) {
-    return jsonError("UPLOAD_FAILED", error instanceof Error ? error.message : "上传失败", 500, guest);
+    const code = error instanceof Error ? error.message : "UPLOAD_FAILED";
+    const message = code === "AUTH_REQUIRED" ? "请先登录后再上传素材" : code;
+    return jsonError(code === "AUTH_REQUIRED" ? code : "UPLOAD_FAILED", message, code === "AUTH_REQUIRED" ? 401 : 500, guest);
   }
 }
 

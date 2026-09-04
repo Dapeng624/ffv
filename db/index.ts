@@ -55,10 +55,72 @@ async function initializeCoreSchema() {
       error_code TEXT,
       error_message TEXT,
       credit_cost INTEGER NOT NULL DEFAULT 0,
+      credit_transaction_id TEXT,
+      credits_refunded_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_generation_tasks_guest_created ON generation_tasks (guest_id, created_at)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_generation_tasks_guest_status ON generation_tasks (guest_id, status)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      credit_balance INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_users_email ON users (email)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS auth_sessions (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_hash ON auth_sessions (token_hash)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_expires ON auth_sessions (user_id, expires_at)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS credit_transactions (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      amount INTEGER NOT NULL,
+      balance_after INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      reference_type TEXT,
+      reference_id TEXT,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_created ON credit_transactions (user_id, created_at)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_credit_transactions_reference ON credit_transactions (reference_type, reference_id)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS payment_orders (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      provider TEXT NOT NULL DEFAULT 'stripe',
+      provider_session_id TEXT UNIQUE,
+      provider_payment_intent_id TEXT,
+      package_id TEXT NOT NULL,
+      credits INTEGER NOT NULL,
+      amount INTEGER NOT NULL,
+      currency TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created ON payment_orders (user_id, created_at)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payment_orders_session ON payment_orders (provider_session_id)"),
   ]);
+
+  await addColumnIfMissing("generation_tasks", "credit_transaction_id", "TEXT");
+  await addColumnIfMissing("generation_tasks", "credits_refunded_at", "TEXT");
+}
+
+async function addColumnIfMissing(table: string, column: string, definition: string) {
+  try {
+    await env.DB.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.toLowerCase().includes("duplicate column")) throw error;
+  }
 }

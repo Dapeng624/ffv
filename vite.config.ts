@@ -42,6 +42,8 @@ export default defineConfig(async ({ mode }) => {
       "PUBLIC_APP_URL",
       "MEDIA_PUBLIC_BASE_URL",
       "ASSET_SIGNING_SECRET",
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
     ]
       .map((name) => [name, localEnv[name]])
       .filter((entry): entry is [string, string] => Boolean(entry[1])),

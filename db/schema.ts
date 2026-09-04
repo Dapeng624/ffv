@@ -43,6 +43,8 @@ export const generationTasks = sqliteTable(
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     creditCost: integer("credit_cost").notNull().default(0),
+    creditTransactionId: text("credit_transaction_id"),
+    creditsRefundedAt: text("credits_refunded_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
@@ -52,5 +54,76 @@ export const generationTasks = sqliteTable(
   ],
 );
 
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull(),
+    creditBalance: integer("credit_balance").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_users_email").on(table.email)],
+);
+
+export const authSessions = sqliteTable(
+  "auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_auth_sessions_token_hash").on(table.tokenHash),
+    index("idx_auth_sessions_user_expires").on(table.userId, table.expiresAt),
+  ],
+);
+
+export const creditTransactions = sqliteTable(
+  "credit_transactions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    amount: integer("amount").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    type: text("type", { enum: ["signup_bonus", "purchase", "generation_debit", "generation_refund", "admin_adjustment"] }).notNull(),
+    referenceType: text("reference_type"),
+    referenceId: text("reference_id"),
+    note: text("note").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_credit_transactions_user_created").on(table.userId, table.createdAt),
+    index("idx_credit_transactions_reference").on(table.referenceType, table.referenceId),
+  ],
+);
+
+export const paymentOrders = sqliteTable(
+  "payment_orders",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    provider: text("provider").notNull().default("stripe"),
+    providerSessionId: text("provider_session_id").unique(),
+    providerPaymentIntentId: text("provider_payment_intent_id"),
+    packageId: text("package_id").notNull(),
+    credits: integer("credits").notNull(),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status", { enum: ["pending", "paid", "failed", "cancelled"] }).notNull().default("pending"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_payment_orders_user_created").on(table.userId, table.createdAt),
+    index("idx_payment_orders_session").on(table.providerSessionId),
+  ],
+);
+
 export type Asset = typeof assets.$inferSelect;
 export type GenerationTask = typeof generationTasks.$inferSelect;
+export type User = typeof users.$inferSelect;

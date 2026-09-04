@@ -33,6 +33,12 @@ type GenerationTask = {
   createdAt: string;
 };
 
+type AccountUser = {
+  email: string;
+  displayName: string;
+  creditBalance: number;
+};
+
 type Template = { name: string; category: string; image: string; prompt: string; cameraMotion: string };
 
 const modes: Array<{ id: GenerationMode; label: string; short: string }> = [
@@ -92,6 +98,7 @@ export default function Home() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
   const [providerMode, setProviderMode] = useState<"seedance" | "mock">("mock");
+  const [user, setUser] = useState<AccountUser | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -105,6 +112,7 @@ export default function Home() {
       ? templates
       : templates.filter((template) => template.category === category);
   const hasActiveTask = tasks.some((task) => task.status === "queued" || task.status === "processing");
+  const providerLabel = providerMode === "seedance" ? "Seedance 实时" : "模拟模式";
 
   const loadTasks = useCallback(async () => {
     try {
@@ -119,17 +127,30 @@ export default function Home() {
         if (payload.provider) setProviderMode(payload.provider);
         setSelectedTaskId((current) => current ?? payload.tasks?.[0]?.id ?? null);
       } else {
-        setError(payload.error?.message ?? "暂时无法同步任务");
+        if (response.status !== 401) setError(payload.error?.message ?? "暂时无法同步任务");
       }
     } catch {
       setError("暂时无法同步任务，请稍后重试");
     }
   }, []);
 
+  const loadAccount = useCallback(async () => {
+    try {
+      const response = await fetch("/api/me", { cache: "no-store" });
+      const payload = (await response.json()) as { user?: AccountUser | null };
+      setUser(payload.user ?? null);
+    } catch {
+      setUser(null);
+    }
+  }, []);
+
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadTasks(), 0);
+    const timer = window.setTimeout(() => {
+      void loadAccount();
+      void loadTasks();
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, [loadTasks]);
+  }, [loadAccount, loadTasks]);
 
   useEffect(() => {
     if (!hasActiveTask) return;
@@ -155,6 +176,7 @@ export default function Home() {
       form.append("file", file);
       const response = await fetch("/api/assets", { method: "POST", body: form });
       const payload = (await response.json()) as { asset?: Omit<AssetRef, "url"> & { url: string }; error?: { message: string } };
+      if (response.status === 401) throw new Error("请先登录后再上传素材");
       if (!response.ok || !payload.asset) throw new Error(payload.error?.message ?? "上传失败");
       setter({ ...payload.asset, url: localUrl, uploading: false });
     } catch (uploadError) {
@@ -174,6 +196,7 @@ export default function Home() {
 
   async function submitGeneration() {
     setError("");
+    if (!user) return setError("请先登录后再生成视频");
     if (!prompt.trim()) return setError("请输入画面描述");
     if (mode !== "text-to-video" && !inputAsset?.id) return setError("请先上传起始素材并等待上传完成");
     if (mode === "first-last-frame" && !endAsset?.id) return setError("请上传结束帧");
@@ -202,6 +225,7 @@ export default function Home() {
       if (!response.ok || !payload.task) throw new Error(payload.error?.message ?? "任务创建失败");
       setTasks((current) => [payload.task!, ...current]);
       setSelectedTaskId(payload.task.id);
+      void loadAccount();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "任务创建失败");
     } finally {
@@ -214,9 +238,13 @@ export default function Home() {
       <header className="topbar" id="top">
         <Link className="brand" href="/" aria-label="返回映作首页"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
         <nav className="primary-nav" aria-label="主要导航">
-          <Link href="/">首页</Link><a className="active" href="#create">生成</a><a href="#templates">模板</a><a href="#works">任务</a>
+          <Link href="/">首页</Link><a className="active" href="#create">生成</a><a href="#templates">模板</a><a href="#works">任务</a><Link href="/pricing">价格</Link>
         </nav>
-        <div className="account-actions"><button className="credit-pill" type="button"><span className="credit-dot" />{providerMode === "seedance" ? "Seedance 实时" : "模拟模式"}</button><button className="avatar-button" type="button" aria-label="匿名工作区">G</button></div>
+        <div className="account-actions">
+          <button className="credit-pill" type="button"><span className="credit-dot" />{providerLabel}</button>
+          <Link className="credit-pill account-credit" href={user ? "/account" : "/auth"}>{user ? `${user.creditBalance} 积分` : "登录"}</Link>
+          <Link className="avatar-button" href={user ? "/account" : "/auth"} aria-label={user ? "账户中心" : "登录"}>{user?.displayName.slice(0, 1).toUpperCase() ?? "G"}</Link>
+        </div>
       </header>
 
       <section className="mode-switcher" aria-label="生成模式">
@@ -235,7 +263,7 @@ export default function Home() {
       <section className="workspace" id="create">
         <div className="control-panel">
           <div className="panel-heading">
-            <div><p className="eyebrow">CORE GENERATOR</p><h1>{activeMode.label}</h1><p className="mode-description">{activeMode.short} · 当前使用模拟视频模型</p></div>
+            <div><p className="eyebrow">CORE GENERATOR</p><h1>{activeMode.label}</h1><p className="mode-description">{activeMode.short} · 当前使用 {providerLabel}</p></div>
             <span className="version-badge">CORE V0.2</span>
           </div>
 
@@ -287,7 +315,7 @@ export default function Home() {
           )}
 
           <div className="generate-block">
-            <button className="generate-button" type="button" disabled={submitting} onClick={() => void submitGeneration()}><span>{submitting ? "正在创建任务..." : "生成视频"}</span><span className="button-cost">{creditCost} 积分 ↗</span></button>
+            <button className="generate-button" type="button" disabled={submitting} onClick={() => void submitGeneration()}><span>{submitting ? "正在创建任务..." : user ? "生成视频" : "登录后生成"}</span><span className="button-cost">{creditCost} 积分 ↗</span></button>
             <p className={error ? "form-error" : ""}>{error || "任务将进入异步队列，关闭页面后也不会丢失"}</p>
           </div>
         </div>
@@ -296,7 +324,7 @@ export default function Home() {
           <div className="stage-toolbar"><div className="stage-title"><span className={`live-dot ${selectedTask?.status ?? "idle"}`} /><span>{selectedTask ? statusLabel(selectedTask.status) : "预览画布"}</span><span className="stage-meta">{ratio} · {duration} 秒 · {cameraMotion}</span></div><div className="stage-actions"><button type="button" aria-label="适应画布">⌗</button><button type="button" aria-label="更多操作">•••</button></div></div>
           <div className="canvas-area">
             {selectedTask?.status === "succeeded" && selectedTask.outputUrl ? (
-              <div className={`video-frame ratio-${selectedTask.aspectRatio.replace(":", "-")}`}><video src={selectedTask.outputUrl} controls autoPlay loop muted playsInline /><div className="result-badge">生成结果 · 模拟模型</div></div>
+              <div className={`video-frame ratio-${selectedTask.aspectRatio.replace(":", "-")}`}><video src={selectedTask.outputUrl} controls autoPlay loop muted playsInline /><div className="result-badge">生成结果 · {selectedTask.model}</div></div>
             ) : (
               <div className={`video-frame ratio-${ratio.replace(":", "-")}`}>
                 {inputAsset?.kind === "video" ? <video src={inputAsset.url} controls muted playsInline /> : <img src={previewImage} alt={`${activeTemplate.name}预览`} />}
@@ -330,7 +358,7 @@ export default function Home() {
         ))}</div> : <div className="empty-tasks"><strong>还没有生成任务</strong><span>创建第一条任务后，排队、进度和结果都会保存在这里。</span></div>}
       </section>
 
-      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CURRENT SCOPE</p><h2>当前只开发生成核心</h2></div><p>登录、真实积分扣费与支付暂不接入。当前匿名工作区已支持持久化素材、任务历史和模型适配层，后续可无缝套入正式账号模板。</p></section>
+      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CREDITS & BILLING</p><h2>账号、积分和支付已经接入</h2></div><p>登录用户可以保存素材和任务，生成前预扣积分，失败后自动退回。积分可在价格页通过 Stripe Checkout 购买。</p><Link href="/pricing">购买积分 ↗</Link></section>
       <footer className="site-footer"><a className="brand" href="#top"><span className="brand-mark">Y</span><span>映作</span></a><p>核心功能开发版</p><span>CORE V0.2</span></footer>
     </main>
   );

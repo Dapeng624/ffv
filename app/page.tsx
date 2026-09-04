@@ -43,8 +43,8 @@ const faqs = [
   ["上传的图片和视频是否安全？", "素材与任务按匿名工作区隔离，其他访客无法读取。正式账号系统接入后将进一步绑定用户身份和数据策略。"],
   ["现在支持哪些生成方式？", "当前核心层支持文生视频、图生视频、首尾帧、动作控制和视频重绘五种工作流。"],
   ["视频可以用于哪些平台？", "可以选择 9:16、1:1 和 16:9，分别适配短视频、方形内容和横屏视频渠道。"],
-  ["目前生成的是真实 AI 视频吗？", "上传、任务、进度和结果管理都是真实系统；当前底层为模拟模型，接入正式视频 API 后会替换为真实生成结果。"],
-  ["后续会增加登录和支付吗？", "会。登录、会员和支付将使用独立模板接入，不会改变当前素材与生成任务核心。"],
+  ["目前生成的是真实 AI 视频吗？", "上传、任务、进度和结果管理都是真实系统；配置 Seedance 后会调用正式视频模型，未配置时会回退到演示模式。"],
+  ["如何购买积分？", "注册登录后进入价格页选择积分包，支付成功后积分会自动入账到账户余额。"],
 ];
 
 export default function Home() {
@@ -54,9 +54,9 @@ export default function Home() {
       <header className="marketing-nav">
         <a className="brand brand-dark" href="#top" aria-label="映作首页"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></a>
         <nav aria-label="网站导航">
-          <a href="#top">首页</a><a href="#features">核心特性</a><a href="#how">使用方法</a><a href="#use-cases">应用场景</a><a href="#faq">常见问题</a>
+          <a href="#top">首页</a><a href="#features">核心特性</a><a href="#how">使用方法</a><a href="/pricing">价格</a><a href="#faq">常见问题</a>
         </nav>
-        <a className="nav-cta" href="/studio">开始创作 <span>↗</span></a>
+        <a className="nav-cta" href="/auth">登录/注册 <span>↗</span></a>
       </header>
 
       <section className="marketing-hero" id="top" style={{ backgroundImage: `url(${media.perfume})` }}>
@@ -65,7 +65,7 @@ export default function Home() {
           <p>AI IMAGE & VIDEO GENERATOR</p>
           <h1>让每一张图片<br />成为有镜头感的视频</h1>
           <span>面向短视频创作者和商家的 AI 视频工作台。从商品图、人物图或门店图开始，快速生成可发布的商业内容。</span>
-          <div className="hero-actions"><a className="hero-primary" href="/studio">免费开始创作 ↗</a><a className="hero-secondary" href="#how">了解使用方法</a></div>
+          <div className="hero-actions"><a className="hero-primary" href="/auth">免费注册领取积分 ↗</a><a className="hero-secondary" href="/studio">进入工作台</a></div>
         </div>
         <div className="hero-facts"><span>图生视频</span><span>镜头控制</span><span>首尾帧</span><span>动作参考</span></div>
       </section>

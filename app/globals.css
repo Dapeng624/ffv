@@ -73,8 +73,9 @@ label:has(input:focus-visible) { outline: 2px solid var(--acid); outline-offset:
 }
 .credit-pill {
   display: inline-flex; align-items: center; gap: 8px; padding: 0 12px;
-  border-radius: 18px; color: var(--text-muted); font-size: 12px;
+  border-radius: 18px; color: var(--text-muted); font-size: 12px; text-decoration: none;
 }
+.account-credit { color: var(--text); }
 .credit-dot {
   width: 8px; height: 8px; border-radius: 50%; background: var(--acid);
   box-shadow: 0 0 12px rgba(215,255,95,.65);
@@ -382,6 +383,85 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
 .core-boundary .eyebrow { color: #718d15; }
 .core-boundary h2 { margin: 0; font-size: 32px; }
 .core-boundary > p { max-width: 680px; margin: 0; color: #63655b; font-size: 13px; line-height: 1.8; }
+.core-boundary > a {
+  justify-self: start; padding: 11px 14px; color: #f7f7f1; border-radius: var(--radius-sm);
+  background: #171813; text-decoration: none; font-size: 11px; font-weight: 800;
+}
+
+.auth-page, .billing-page, .account-page {
+  min-height: 100vh; padding: 28px; background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    var(--canvas);
+  background-size: 48px 48px; color: var(--text);
+}
+.auth-page { display: grid; grid-template-rows: auto 1fr; gap: 40px; }
+.auth-panel {
+  width: min(100%,440px); margin: auto; padding: 28px; border: 1px solid var(--border);
+  border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-panel);
+}
+.auth-panel.compact { margin-top: 12vh; }
+.auth-panel h1 { margin: 0 0 10px; font-size: 32px; }
+.auth-panel p { margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+.auth-tabs {
+  margin: 24px 0; padding: 4px; display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border); border-radius: var(--radius-md); background: #141512;
+}
+.auth-tabs button {
+  height: 38px; border: 0; border-radius: 5px; color: var(--text-faint); background: transparent; cursor: pointer;
+}
+.auth-tabs button.active { color: var(--text); background: var(--surface-soft); }
+.auth-form { display: grid; gap: 14px; }
+.auth-form label, .profile-card label { display: grid; gap: 7px; color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.auth-form input {
+  height: 44px; padding: 0 12px; color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: #141512; font-size: 12px;
+}
+.auth-submit, .auth-link-button, .pricing-card button, .profile-card button {
+  height: 44px; display: inline-grid; place-items: center; border: 0; border-radius: var(--radius-sm);
+  color: #151610; background: var(--acid); text-decoration: none; font-size: 12px; font-weight: 850; cursor: pointer;
+}
+.auth-submit:disabled, .pricing-card button:disabled { opacity: .6; cursor: wait; }
+.form-error, .billing-error { color: var(--coral); font-size: 11px; }
+.simple-nav {
+  width: min(1180px,100%); margin: 0 auto 56px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+}
+.simple-nav nav { display: flex; gap: 18px; }
+.simple-nav nav a { color: var(--text-muted); text-decoration: none; font-size: 12px; }
+.billing-hero { width: min(1180px,100%); margin: 0 auto 26px; }
+.billing-hero h1 { max-width: 720px; margin: 0 0 14px; font-size: clamp(36px,5vw,66px); line-height: 1.04; }
+.billing-hero p:last-child { max-width: 620px; margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.8; }
+.billing-page .pricing-grid { width: min(1180px,100%); margin: 0 auto; }
+.pricing-card {
+  min-height: 300px; padding: 22px; display: flex; flex-direction: column; gap: 18px;
+  border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
+}
+.pricing-card div span, .pricing-card small { color: var(--text-faint); font-size: 11px; }
+.pricing-card strong { display: block; margin-top: 14px; color: var(--acid); font-size: 48px; line-height: .9; }
+.pricing-card p { min-height: 42px; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
+.pricing-card b { margin-top: auto; font-size: 20px; }
+.account-grid, .ledger-section { width: min(1180px,100%); margin: 0 auto; }
+.account-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; margin-bottom: 34px; }
+.account-summary, .profile-card {
+  padding: 26px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
+}
+.account-summary h1 { margin: 0; color: var(--acid); font-size: 72px; line-height: .95; }
+.account-summary span, .profile-card p { display: block; margin: 10px 0 22px; color: var(--text-muted); font-size: 12px; }
+.account-summary a { color: var(--acid); text-decoration: none; font-size: 12px; font-weight: 800; }
+.profile-card h2 { margin: 0 0 8px; font-size: 28px; }
+.profile-card button { width: 120px; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); }
+.ledger-list { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.ledger-row {
+  min-height: 64px; padding: 12px 16px; display: grid; grid-template-columns: 1fr 90px 90px; align-items: center; gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-row strong, .ledger-row span { display: block; }
+.ledger-row strong { margin-bottom: 5px; font-size: 12px; }
+.ledger-row span, .ledger-row small { color: var(--text-faint); font-size: 10px; }
+.ledger-row b { justify-self: end; font-size: 16px; }
+.ledger-row b.positive { color: var(--success); }
+.ledger-row b.negative { color: var(--coral); }
 
 .pricing-section {
   padding: 96px max(24px,calc((100% - 1500px) / 2)); display: grid;
@@ -431,6 +511,7 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   .mode-switcher { overflow-x: auto; grid-template-columns: repeat(5,180px); }
   .pricing-section { grid-template-columns: 1fr; gap: 36px; }
   .pricing-intro { max-width: 560px; }
+  .account-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 800px) {
   .topbar { height: 60px; padding: 0 16px; }
@@ -456,6 +537,11 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   .pricing-section { padding: 64px 20px; }
   .pricing-grid { grid-template-columns: 1fr; }
   .price-card { min-height: 360px; }
+  .auth-page, .billing-page, .account-page { padding: 18px; }
+  .simple-nav { margin-bottom: 36px; }
+  .billing-page .pricing-grid { grid-template-columns: 1fr; }
+  .ledger-row { grid-template-columns: 1fr auto; }
+  .ledger-row small { display: none; }
   .site-footer { grid-template-columns: 1fr auto; }
   .site-footer p { display: none; }
 }

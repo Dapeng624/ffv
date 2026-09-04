@@ -8,6 +8,13 @@
       "when": 1788164860588,
       "tag": "0000_early_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788519996359,
+      "tag": "0001_free_boomer",
+      "breakpoints": true
     }
   ]
 }

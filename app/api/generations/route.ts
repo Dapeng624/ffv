@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { assets, generationTasks } from "@/db/schema";
 import { ensureCoreSchema, getDb } from "@/db";
+import { requireUser } from "@/lib/auth";
+import { debitCredits, grantCredits, refundGenerationCredits } from "@/lib/credits";
 import { attachGuestCookie, getGuestWorkspace } from "@/lib/guest-workspace";
 import { configuredVideoProvider, generationCost, getVideoProvider, parseGenerationInput } from "@/lib/video-generation";
 
@@ -8,16 +10,18 @@ export async function GET(request: Request) {
   const guest = getGuestWorkspace(request);
   try {
     await ensureCoreSchema();
-    await reconcileProviderTasks(guest.id);
+    const user = await requireUser(request);
+    await reconcileProviderTasks(user.id);
     const tasks = await getDb()
       .select()
       .from(generationTasks)
-      .where(eq(generationTasks.guestId, guest.id))
+      .where(eq(generationTasks.guestId, user.id))
       .orderBy(desc(generationTasks.createdAt))
       .limit(40);
     return attachGuestCookie(Response.json({ tasks, provider: configuredVideoProvider() }), guest);
   } catch (error) {
-    return jsonError("TASK_LIST_FAILED", errorMessage(error), 500, guest);
+    const code = errorMessage(error);
+    return jsonError(code === "AUTH_REQUIRED" ? code : "TASK_LIST_FAILED", friendlyMessage(code), code === "AUTH_REQUIRED" ? 401 : 500, guest);
   }
 }
 
@@ -25,6 +29,7 @@ export async function POST(request: Request) {
   const guest = getGuestWorkspace(request);
   try {
     await ensureCoreSchema();
+    const user = await requireUser(request);
     const input = parseGenerationInput(await request.json());
     const referencedIds = [input.inputAssetId, input.endAssetId, input.motionAssetId].filter(Boolean) as string[];
     let ownedAssets: Array<{ id: string; kind: "image" | "video"; objectKey: string }> = [];
@@ -32,7 +37,7 @@ export async function POST(request: Request) {
       ownedAssets = await getDb()
         .select({ id: assets.id, kind: assets.kind, objectKey: assets.objectKey })
         .from(assets)
-        .where(and(eq(assets.guestId, guest.id), inArray(assets.id, referencedIds)));
+        .where(and(eq(assets.guestId, user.id), inArray(assets.id, referencedIds)));
       if (ownedAssets.length !== new Set(referencedIds).size) return jsonError("ASSET_NOT_FOUND", "素材不存在或无权访问", 404, guest);
       const kinds = new Map(ownedAssets.map((asset) => [asset.id, asset.kind]));
       const inputKind = input.inputAssetId ? kinds.get(input.inputAssetId) : null;
@@ -43,17 +48,38 @@ export async function POST(request: Request) {
     }
 
     const provider = getVideoProvider(input.model);
-    const providerTask = await provider.submit({
-      ...input,
-      assets: new Map(ownedAssets.map((asset) => [asset.id, asset])),
-      safetyIdentifier: guest.id,
-    });
     const id = crypto.randomUUID();
+    const creditCost = generationCost(input);
+    const debit = await debitCredits({
+      userId: user.id,
+      amount: creditCost,
+      referenceType: "generation_task",
+      referenceId: id,
+      note: "视频生成预扣",
+    });
+    let providerTask: Awaited<ReturnType<typeof provider.submit>>;
+    try {
+      providerTask = await provider.submit({
+        ...input,
+        assets: new Map(ownedAssets.map((asset) => [asset.id, asset])),
+        safetyIdentifier: user.id,
+      });
+    } catch (error) {
+      await grantCredits({
+        userId: user.id,
+        amount: creditCost,
+        type: "generation_refund",
+        referenceType: "generation_task",
+        referenceId: id,
+        note: errorMessage(error),
+      });
+      throw error;
+    }
     const [task] = await getDb()
       .insert(generationTasks)
       .values({
         id,
-        guestId: guest.id,
+        guestId: user.id,
         mode: input.mode,
         model: providerTask.model,
         prompt: input.prompt,
@@ -68,7 +94,8 @@ export async function POST(request: Request) {
         providerTaskId: providerTask.providerTaskId,
         status: "queued",
         progress: 3,
-        creditCost: generationCost(input),
+        creditCost,
+        creditTransactionId: debit.transactionId,
       })
       .returning();
 
@@ -81,7 +108,11 @@ export async function POST(request: Request) {
         ? 400
         : code === "MODEL_NOT_AVAILABLE"
           ? 422
-          : code === "QuotaExceeded" || code === "RateLimitExceeded"
+            : code === "INSUFFICIENT_CREDITS"
+              ? 402
+              : code === "AUTH_REQUIRED"
+                ? 401
+                : code === "QuotaExceeded" || code === "RateLimitExceeded"
             ? 429
             : 500;
     return jsonError(code, friendlyMessage(code), status, guest);
@@ -99,6 +130,14 @@ async function reconcileProviderTasks(guestId: string) {
     try {
       const provider = getVideoProvider(task.model);
       const status = await provider.getStatus(task.providerTaskId);
+      if (status.status === "failed" && !task.creditsRefundedAt) {
+        await refundGenerationCredits({
+          taskId: task.id,
+          userId: guestId,
+          amount: task.creditCost,
+          reason: status.errorCode ?? "生成失败",
+        });
+      }
       await db
         .update(generationTasks)
         .set({
@@ -107,6 +146,7 @@ async function reconcileProviderTasks(guestId: string) {
           outputUrl: status.outputUrl ?? task.outputUrl,
           errorCode: status.errorCode ?? null,
           errorMessage: status.errorMessage ?? null,
+          creditsRefundedAt: status.status === "failed" ? new Date().toISOString() : task.creditsRefundedAt,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(generationTasks.id, task.id));
@@ -123,6 +163,8 @@ function errorMessage(error: unknown) {
 function friendlyMessage(code: string) {
   const messages: Record<string, string> = {
     PROMPT_REQUIRED: "请输入画面描述",
+    AUTH_REQUIRED: "请先登录后再生成视频",
+    INSUFFICIENT_CREDITS: "积分不足，请先购买积分",
     PROMPT_TOO_LONG: "画面描述不能超过 1200 个字符",
     INPUT_ASSET_REQUIRED: "当前模式需要上传起始素材",
     END_ASSET_REQUIRED: "首尾帧模式需要上传结束帧",
@@ -139,6 +181,7 @@ function friendlyMessage(code: string) {
     OutputVideoSensitiveContentDetected: "生成结果未通过内容安全检查，请调整描述或素材",
     QuotaExceeded: "当前模型排队任务已达上限，请稍后重试",
     RateLimitExceeded: "请求过于频繁，请稍后重试",
+    "InputImageSensitiveContentDetected.PrivacyInformation": "输入图片包含隐私信息，请打码或更换素材",
   };
   return messages[code] ?? "任务创建失败，请稍后重试";
 }
