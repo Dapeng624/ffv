@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://video.aitodoall.com"),
   title: "映作 YINGZO - AI 视频生成工作台",
   description: "面向短视频创作者和商家的 AI 视频生成工作台。",
   openGraph: {
