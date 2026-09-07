@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 const SESSION_COOKIE = "yingzo_session";
 const SESSION_DAYS = 30;
-const PASSWORD_ITERATIONS = 210_000;
+const MAX_PASSWORD_ITERATIONS = 100_000;
+const PASSWORD_ITERATIONS = MAX_PASSWORD_ITERATIONS;
 
 export type AuthUser = {
   id: string;
@@ -44,7 +45,14 @@ export async function hashPassword(password: string) {
 export async function verifyPassword(password: string, encoded: string) {
   const [algorithm, iterationsValue, saltValue, hashValue] = encoded.split(":");
   const iterations = Number(iterationsValue);
-  if (algorithm !== "pbkdf2-sha256" || !Number.isInteger(iterations) || !saltValue || !hashValue) return false;
+  if (
+    algorithm !== "pbkdf2-sha256" ||
+    !Number.isInteger(iterations) ||
+    iterations < 1 ||
+    iterations > MAX_PASSWORD_ITERATIONS ||
+    !saltValue ||
+    !hashValue
+  ) return false;
 
   const salt = base64UrlDecode(saltValue);
   const expected = base64UrlDecode(hashValue);
