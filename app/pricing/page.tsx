@@ -20,6 +20,7 @@ type PaymentProvider = {
   name: string;
   description: string;
   recommended: boolean;
+  configured: boolean;
 };
 
 export default function PricingPage() {
@@ -30,11 +31,17 @@ export default function PricingPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/billing/packages")
-      .then((response) => response.json())
-      .then((payload: { plans?: MembershipPlan[]; providers?: PaymentProvider[] }) => {
-        setPlans(payload.plans ?? []);
-        setProviders(payload.providers ?? []);
+    Promise.all([
+      fetch("/api/billing/packages").then((response) => response.json()) as Promise<{ plans?: MembershipPlan[] }>,
+      fetch("/api/billing/providers").then((response) => response.json()) as Promise<{ providers?: PaymentProvider[] }>,
+    ])
+      .then(([packagesPayload, providersPayload]) => {
+        setPlans(packagesPayload.plans ?? []);
+        const nextProviders = providersPayload.providers ?? [];
+        setProviders(nextProviders);
+        const preferred = nextProviders.find((item) => item.recommended && item.configured)
+          ?? nextProviders.find((item) => item.configured);
+        if (preferred) setProvider(preferred.id);
       })
       .catch(() => setError("暂时无法加载会员套餐"));
   }, []);
@@ -75,7 +82,7 @@ export default function PricingPage() {
       <section className="payment-provider-picker" aria-label="选择支付方式">
         <div className="provider-picker-heading">
           <div><strong>支付方式</strong><span>选择后将在对应平台的安全结账页完成付款</span></div>
-          <small>{providers.find((item) => item.id === provider)?.description}</small>
+          <small>{providerDescription(providers.find((item) => item.id === provider))}</small>
         </div>
         <div className="provider-segmented-control">
           {providers.map((item) => (
@@ -83,11 +90,12 @@ export default function PricingPage() {
               className={provider === item.id ? "active" : ""}
               key={item.id}
               type="button"
+              disabled={!item.configured}
               aria-pressed={provider === item.id}
               onClick={() => setProvider(item.id)}
             >
               <span>{item.name}</span>
-              {item.recommended && <small>推荐</small>}
+              <small>{item.configured ? (item.recommended ? "推荐" : "可用") : "待配置"}</small>
             </button>
           ))}
         </div>
@@ -105,10 +113,16 @@ export default function PricingPage() {
             </ul>
             <b>{formatMoney(plan.amount, plan.currency)} <small>/ {plan.intervalLabel}</small></b>
             {plan.id === "yearly" && <span className="monthly-equivalent">相当于每月 $8.25</span>}
-            <button type="button" disabled={Boolean(loadingPlan)} onClick={() => void checkout(plan.id)}>
+            <button
+              type="button"
+              disabled={Boolean(loadingPlan) || !providers.find((item) => item.id === provider)?.configured}
+              onClick={() => void checkout(plan.id)}
+            >
               {loadingPlan === `${provider}:${plan.id}`
                 ? "正在跳转..."
-                : `使用 ${providers.find((item) => item.id === provider)?.name ?? provider} 订阅`}
+                : providers.find((item) => item.id === provider)?.configured
+                  ? `使用 ${providers.find((item) => item.id === provider)?.name ?? provider} 订阅`
+                  : `${providers.find((item) => item.id === provider)?.name ?? provider} 尚未配置`}
             </button>
           </article>
         ))}
@@ -121,4 +135,9 @@ export default function PricingPage() {
 
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat("zh-CN", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
+}
+
+function providerDescription(provider?: PaymentProvider) {
+  if (!provider) return "正在读取支付平台配置";
+  return provider.configured ? provider.description : `${provider.name} 尚未完成服务端配置`;
 }

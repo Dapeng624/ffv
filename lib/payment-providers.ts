@@ -5,9 +5,10 @@ export type PaymentProviderOption = {
   name: string;
   description: string;
   recommended: boolean;
+  configured: boolean;
 };
 
-const providers: PaymentProviderOption[] = [
+const providers: Array<Omit<PaymentProviderOption, "configured">> = [
   {
     id: "creem",
     name: "Creem",
@@ -22,8 +23,11 @@ const providers: PaymentProviderOption[] = [
   },
 ];
 
-export function paymentProviders() {
-  return providers;
+export function paymentProviders(configuration: Partial<Record<PaymentProvider, boolean>> = {}) {
+  return providers.map((provider) => ({
+    ...provider,
+    configured: Boolean(configuration[provider.id]),
+  }));
 }
 
 export function isPaymentProvider(value: string): value is PaymentProvider {

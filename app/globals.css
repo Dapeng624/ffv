@@ -450,6 +450,7 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   color: var(--text-faint); border: 0; border-radius: 5px; background: transparent; font-size: 11px; cursor: pointer;
 }
 .provider-segmented-control button.active { color: var(--text); background: var(--surface-soft); }
+.provider-segmented-control button:disabled { opacity: .45; cursor: not-allowed; }
 .provider-segmented-control small { padding: 3px 4px; color: #151610; border-radius: 3px; background: var(--acid); font-size: 7px; font-weight: 850; }
 .membership-pricing-grid {
   width: min(820px,100%); margin: 0 auto; display: grid;
@@ -460,6 +461,7 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
 }
 .membership-price-card { position: relative; min-height: 390px; }
+.membership-price-card > button:disabled { cursor: not-allowed; }
 .membership-price-card.featured { border-color: var(--acid); }
 .membership-badge {
   position: absolute; top: 16px; right: 16px; padding: 6px 8px;
