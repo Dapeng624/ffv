@@ -4,6 +4,7 @@ import { ensureCoreSchema, getDb } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { debitCredits, grantCredits, refundGenerationCredits } from "@/lib/credits";
 import { attachGuestCookie, getGuestWorkspace } from "@/lib/guest-workspace";
+import { reconcileSubscriptionCredits } from "@/lib/membership";
 import { configuredVideoProvider, generationCost, getVideoProvider, parseGenerationInput } from "@/lib/video-generation";
 
 export async function GET(request: Request) {
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
   try {
     await ensureCoreSchema();
     const user = await requireUser(request);
+    await reconcileSubscriptionCredits(user.id);
     const input = parseGenerationInput(await request.json());
     const referencedIds = [input.inputAssetId, input.endAssetId, input.motionAssetId].filter(Boolean) as string[];
     let ownedAssets: Array<{ id: string; kind: "image" | "video"; objectKey: string }> = [];

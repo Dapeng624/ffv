@@ -44,6 +44,8 @@ export default defineConfig(async ({ mode }) => {
       "ASSET_SIGNING_SECRET",
       "STRIPE_SECRET_KEY",
       "STRIPE_WEBHOOK_SECRET",
+      "STRIPE_MONTHLY_PRICE_ID",
+      "STRIPE_YEARLY_PRICE_ID",
     ]
       .map((name) => [name, localEnv[name]])
       .filter((entry): entry is [string, string] => Boolean(entry[1])),
@@ -70,6 +72,7 @@ export default defineConfig(async ({ mode }) => {
           },
         ]
       : [],
+    triggers: { crons: ["17 0 * * *"] },
   };
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.

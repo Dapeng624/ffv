@@ -110,10 +110,62 @@ async function initializeCoreSchema() {
     )`),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payment_orders_user_created ON payment_orders (user_id, created_at)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payment_orders_session ON payment_orders (provider_session_id)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      provider TEXT NOT NULL DEFAULT 'stripe',
+      provider_subscription_id TEXT NOT NULL UNIQUE,
+      provider_customer_id TEXT NOT NULL,
+      plan_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+      started_at TEXT NOT NULL,
+      current_period_start TEXT NOT NULL,
+      current_period_end TEXT NOT NULL,
+      next_credit_grant_at TEXT NOT NULL,
+      credits_granted_periods INTEGER NOT NULL DEFAULT 0,
+      ended_at TEXT,
+      provider_event_created_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_updated ON subscriptions (user_id, updated_at)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions (provider_customer_id)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS subscription_credit_grants (
+      id TEXT PRIMARY KEY NOT NULL,
+      subscription_id TEXT NOT NULL REFERENCES subscriptions(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      period_key TEXT NOT NULL,
+      installment_number INTEGER NOT NULL,
+      credits INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_subscription_grants_period ON subscription_credit_grants (subscription_id, period_key)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_subscription_grants_user_created ON subscription_credit_grants (user_id, created_at)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS subscription_checkouts (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      provider_session_id TEXT NOT NULL UNIQUE,
+      plan_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_subscription_checkouts_user_created ON subscription_checkouts (user_id, created_at)"),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+      event_id TEXT PRIMARY KEY NOT NULL,
+      event_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
   ]);
 
   await addColumnIfMissing("generation_tasks", "credit_transaction_id", "TEXT");
   await addColumnIfMissing("generation_tasks", "credits_refunded_at", "TEXT");
+  await addColumnIfMissing("subscriptions", "provider_event_created_at", "TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'");
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string) {

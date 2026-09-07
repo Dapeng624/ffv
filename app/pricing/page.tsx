@@ -3,46 +3,49 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type CreditPackage = {
-  id: string;
+type MembershipPlan = {
+  id: "monthly" | "yearly";
   name: string;
-  credits: number;
   amount: number;
   currency: string;
+  interval: "month" | "year";
+  intervalLabel: string;
+  creditsPerMonth: number;
+  creditsPerYear: number;
   description: string;
 };
 
 export default function PricingPage() {
-  const [packages, setPackages] = useState<CreditPackage[]>([]);
-  const [loadingPackage, setLoadingPackage] = useState("");
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/billing/packages")
       .then((response) => response.json())
-      .then((payload: { packages?: CreditPackage[] }) => setPackages(payload.packages ?? []))
-      .catch(() => setError("暂时无法加载套餐"));
+      .then((payload: { plans?: MembershipPlan[] }) => setPlans(payload.plans ?? []))
+      .catch(() => setError("暂时无法加载会员套餐"));
   }, []);
 
-  async function checkout(packageId: string) {
-    setLoadingPackage(packageId);
+  async function checkout(planId: string) {
+    setLoadingPlan(planId);
     setError("");
     try {
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ planId }),
       });
       const payload = (await response.json()) as { url?: string; error?: { message: string } };
       if (response.status === 401) {
-        window.location.href = "/auth";
+        window.location.assign("/auth");
         return;
       }
-      if (!response.ok || !payload.url) throw new Error(payload.error?.message ?? "暂时无法创建支付订单");
-      window.location.href = payload.url;
+      if (!response.ok || !payload.url) throw new Error(payload.error?.message ?? "暂时无法创建会员订阅");
+      window.location.assign(payload.url);
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : "暂时无法创建支付订单");
-      setLoadingPackage("");
+      setError(checkoutError instanceof Error ? checkoutError.message : "暂时无法创建会员订阅");
+      setLoadingPlan("");
     }
   }
 
@@ -53,22 +56,30 @@ export default function PricingPage() {
         <nav><Link href="/studio">工作台</Link><Link href="/account">账户</Link></nav>
       </header>
       <section className="billing-hero">
-        <p className="eyebrow">CREDITS</p>
-        <h1>购买积分，继续生成视频</h1>
-        <p>积分用于提交视频生成任务。5 秒普通视频消耗 10 积分，10 秒普通视频消耗 20 积分。</p>
+        <p className="eyebrow">MEMBERSHIP</p>
+        <h1>稳定创作，从每月 200 积分开始</h1>
+        <p>月度和年度会员享有相同的每月积分权益。年度会员一次支付一年费用，2400 积分按月分 12 次到账。</p>
       </section>
-      <section className="pricing-grid">
-        {packages.map((item) => (
-          <article className="pricing-card" key={item.id}>
-            <div><span>{item.name}</span><strong>{item.credits}</strong><small>积分</small></div>
-            <p>{item.description}</p>
-            <b>{formatMoney(item.amount, item.currency)}</b>
-            <button type="button" disabled={loadingPackage === item.id} onClick={() => void checkout(item.id)}>
-              {loadingPackage === item.id ? "正在跳转..." : "购买积分"}
+      <section className="membership-pricing-grid">
+        {plans.map((plan) => (
+          <article className={`pricing-card membership-price-card${plan.id === "yearly" ? " featured" : ""}`} key={plan.id}>
+            {plan.id === "yearly" && <span className="membership-badge">节省 $19.80</span>}
+            <div><span>{plan.name}</span><strong>{plan.creditsPerMonth}</strong><small>积分 / 月</small></div>
+            <p>{plan.description}</p>
+            <ul>
+              <li>每月发放 {plan.creditsPerMonth} 积分</li>
+              <li>全年权益 {plan.creditsPerYear} 积分</li>
+              <li>可在账户中心管理续订</li>
+            </ul>
+            <b>{formatMoney(plan.amount, plan.currency)} <small>/ {plan.intervalLabel}</small></b>
+            {plan.id === "yearly" && <span className="monthly-equivalent">相当于每月 $8.25</span>}
+            <button type="button" disabled={Boolean(loadingPlan)} onClick={() => void checkout(plan.id)}>
+              {loadingPlan === plan.id ? "正在跳转..." : `订阅${plan.name}`}
             </button>
           </article>
         ))}
       </section>
+      <p className="billing-note">会员会自动续费。取消续订后，权益保留到当前已付款周期结束。</p>
       {error && <p className="billing-error">{error}</p>}
     </main>
   );

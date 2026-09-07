@@ -1,5 +1,5 @@
-import { creditPackages } from "@/lib/credits";
+import { membershipPlans } from "@/lib/membership-plans";
 
 export async function GET() {
-  return Response.json({ packages: creditPackages() });
+  return Response.json({ plans: membershipPlans() });
 }

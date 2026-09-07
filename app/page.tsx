@@ -57,7 +57,7 @@ const faqs = [
   ["目前支持哪些生成方式？", "当前支持文生视频、图生视频、首尾帧、动作参考和视频重绘五种工作流。"],
   ["可以生成哪些视频比例和时长？", "工作台支持 9:16、1:1 和 16:9，并提供 5 秒与 10 秒时长选项；实际可用参数也会受到模型能力限制。"],
   ["生成失败会扣除积分吗？", "创建任务时会预扣对应积分；如果模型任务确认失败，系统会把本次消耗的积分退回账户。"],
-  ["如何购买和查看积分？", "登录后可在价格页购买积分包，并在账户中心查看当前余额和每一笔积分变动记录。"],
+  ["会员积分如何发放？", "月度和年度会员每月发放 200 积分。年度会员一次支付一年费用，2400 积分按月分 12 次到账，积分流水可在账户中心查看。"],
 ];
 
 export default function Home() {
@@ -146,7 +146,7 @@ export default function Home() {
       <section className="final-cta" style={{ backgroundImage: `url(${media.food})` }}><div /><p>READY TO CREATE?</p><h2>准备好创作一条<br />有镜头感的视频了吗？</h2><a href="/auth?mode=register">免费注册并开始创作 ↗</a></section>
       <footer className="marketing-footer">
         <div><a className="brand" href="#top"><span className="brand-mark">Y</span><span>映作</span></a><p>面向短视频创作者、商家和创意团队的 AI 视频生成平台。</p></div>
-        <div><strong>核心产品</strong><a href="/studio">视频生成</a><a href="#capabilities">高级能力</a><a href="#products">产品矩阵</a><a href="/pricing">积分价格</a></div>
+        <div><strong>核心产品</strong><a href="/studio">视频生成</a><a href="#capabilities">高级能力</a><a href="#products">产品矩阵</a><a href="/pricing">会员价格</a></div>
         <div><strong>账户与支持</strong><a href="/auth">登录与注册</a><a href="/account">账户中心</a><a href="#faq">常见问题</a><span>映作 V0.3</span></div>
       </footer>
     </main>

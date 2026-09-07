@@ -106,6 +106,23 @@ YINGZO_R2_BUCKET_NAME=site-creator-r2
 
 The D1 and R2 runtime binding names remain `DB` and `MEDIA`. Configure Seedance credentials separately under Worker runtime variables and secrets; never commit `.env.local`.
 
+Stripe subscriptions also require these Worker runtime variables and secrets:
+
+```text
+PUBLIC_APP_URL=https://video.aitodoall.com
+STRIPE_SECRET_KEY=<server-side Stripe key>
+STRIPE_WEBHOOK_SECRET=<webhook signing secret>
+STRIPE_MONTHLY_PRICE_ID=<USD 9.90 recurring monthly Price ID>
+STRIPE_YEARLY_PRICE_ID=<USD 99 recurring yearly Price ID>
+```
+
+Configure the Stripe webhook endpoint at `/api/billing/webhook` for
+`checkout.session.completed`, `checkout.session.expired`,
+`customer.subscription.created`, `customer.subscription.updated`,
+`customer.subscription.deleted`, `invoice.paid`, and `invoice.payment_failed`.
+The customer portal must also be enabled in Stripe before users can manage or
+cancel subscriptions.
+
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)

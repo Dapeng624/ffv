@@ -1,11 +1,11 @@
 import { env } from "cloudflare:workers";
-import { requiredRuntimeEnv } from "@/lib/runtime-env";
 
 export const SIGNUP_BONUS_CREDITS = 20;
 
 export type CreditTransactionType =
   | "signup_bonus"
   | "purchase"
+  | "subscription_grant"
   | "generation_debit"
   | "generation_refund"
   | "admin_adjustment";
@@ -105,21 +105,4 @@ export async function getCreditSummary(userId: string) {
     balance: user?.credit_balance ?? 0,
     transactions: transactions.results,
   };
-}
-
-export function creditPackages() {
-  return [
-    { id: "starter", name: "入门包", credits: 100, amount: 990, currency: "usd", description: "约 10 条 5 秒普通视频" },
-    { id: "creator", name: "创作者包", credits: 350, amount: 2990, currency: "usd", description: "适合连续测试多个创意方向" },
-    { id: "studio", name: "工作室包", credits: 900, amount: 6990, currency: "usd", description: "适合团队批量制作素材" },
-  ];
-}
-
-export function findCreditPackage(id: string) {
-  return creditPackages().find((item) => item.id === id) ?? null;
-}
-
-export function assertPaymentEnv() {
-  requiredRuntimeEnv("STRIPE_SECRET_KEY");
-  requiredRuntimeEnv("PUBLIC_APP_URL");
 }

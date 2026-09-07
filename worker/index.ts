@@ -19,6 +19,10 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+interface ScheduledController {
+  scheduledTime: number;
+}
+
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -41,6 +45,16 @@ const worker = {
     }
 
     return handler.fetch(request, env, ctx);
+  },
+  async scheduled(controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil((async () => {
+      const [{ ensureCoreSchema }, { reconcileAllDueSubscriptionCredits }] = await Promise.all([
+        import("../db"),
+        import("../lib/membership"),
+      ]);
+      await ensureCoreSchema();
+      await reconcileAllDueSubscriptionCredits(new Date(controller.scheduledTime));
+    })());
   },
 };
 

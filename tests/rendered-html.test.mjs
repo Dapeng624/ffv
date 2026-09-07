@@ -51,3 +51,43 @@ test("keeps the five-mode studio wired to the provider API", async () => {
   assert.match(envExample, /ARK_API_KEY=/);
   assert.match(envExample, /ARK_VIDEO_MODEL=/);
 });
+
+test("exposes monthly and yearly memberships with monthly credit installments", async () => {
+  const response = await render("/api/billing/packages");
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.deepEqual(payload.plans.map((plan) => plan.id), ["monthly", "yearly"]);
+
+  const monthly = payload.plans[0];
+  assert.equal(monthly.amount, 990);
+  assert.equal(monthly.interval, "month");
+  assert.equal(monthly.creditsPerMonth, 200);
+
+  const yearly = payload.plans[1];
+  assert.equal(yearly.amount, 9900);
+  assert.equal(yearly.interval, "year");
+  assert.equal(yearly.creditsPerMonth, 200);
+  assert.equal(yearly.creditsPerYear, 2400);
+});
+
+test("keeps subscription billing idempotent and reconciles annual installments", async () => {
+  const [membership, schema, stripe, webhook, worker, envExample] = await Promise.all([
+    readFile(new URL("../lib/membership.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/stripe.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/webhook/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(stripe, /body\.set\("mode", "subscription"\)/);
+  assert.match(membership, /subscription_credit_grants/);
+  assert.match(schema, /idx_subscription_grants_period/);
+  assert.match(membership, /reconcileAllDueSubscriptionCredits/);
+  assert.match(webhook, /customer\.subscription\./);
+  assert.match(webhook, /invoice\.paid/);
+  assert.match(webhook, /invoice\.payment_failed/);
+  assert.match(worker, /async scheduled/);
+  assert.match(envExample, /STRIPE_MONTHLY_PRICE_ID=/);
+  assert.match(envExample, /STRIPE_YEARLY_PRICE_ID=/);
+});

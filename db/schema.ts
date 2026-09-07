@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const assets = sqliteTable(
   "assets",
@@ -90,7 +90,7 @@ export const creditTransactions = sqliteTable(
     userId: text("user_id").notNull().references(() => users.id),
     amount: integer("amount").notNull(),
     balanceAfter: integer("balance_after").notNull(),
-    type: text("type", { enum: ["signup_bonus", "purchase", "generation_debit", "generation_refund", "admin_adjustment"] }).notNull(),
+    type: text("type", { enum: ["signup_bonus", "purchase", "subscription_grant", "generation_debit", "generation_refund", "admin_adjustment"] }).notNull(),
     referenceType: text("reference_type"),
     referenceId: text("reference_id"),
     note: text("note").notNull().default(""),
@@ -124,6 +124,77 @@ export const paymentOrders = sqliteTable(
   ],
 );
 
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    provider: text("provider").notNull().default("stripe"),
+    providerSubscriptionId: text("provider_subscription_id").notNull().unique(),
+    providerCustomerId: text("provider_customer_id").notNull(),
+    planId: text("plan_id", { enum: ["monthly", "yearly"] }).notNull(),
+    status: text("status", {
+      enum: ["incomplete", "incomplete_expired", "trialing", "active", "past_due", "canceled", "unpaid", "paused"],
+    }).notNull(),
+    cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }).notNull().default(false),
+    startedAt: text("started_at").notNull(),
+    currentPeriodStart: text("current_period_start").notNull(),
+    currentPeriodEnd: text("current_period_end").notNull(),
+    nextCreditGrantAt: text("next_credit_grant_at").notNull(),
+    creditsGrantedPeriods: integer("credits_granted_periods").notNull().default(0),
+    endedAt: text("ended_at"),
+    providerEventCreatedAt: text("provider_event_created_at").notNull().default("1970-01-01T00:00:00.000Z"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_subscriptions_user_updated").on(table.userId, table.updatedAt),
+    index("idx_subscriptions_customer").on(table.providerCustomerId),
+  ],
+);
+
+export const subscriptionCreditGrants = sqliteTable(
+  "subscription_credit_grants",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id").notNull().references(() => subscriptions.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    periodKey: text("period_key").notNull(),
+    installmentNumber: integer("installment_number").notNull(),
+    credits: integer("credits").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_subscription_grants_period").on(table.subscriptionId, table.periodKey),
+    index("idx_subscription_grants_user_created").on(table.userId, table.createdAt),
+  ],
+);
+
+export const subscriptionCheckouts = sqliteTable(
+  "subscription_checkouts",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id),
+    providerSessionId: text("provider_session_id").notNull().unique(),
+    planId: text("plan_id", { enum: ["monthly", "yearly"] }).notNull(),
+    status: text("status", { enum: ["pending", "completed", "expired"] }).notNull().default("pending"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_subscription_checkouts_user_created").on(table.userId, table.createdAt)],
+);
+
+export const stripeWebhookEvents = sqliteTable("stripe_webhook_events", {
+  eventId: text("event_id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  status: text("status", { enum: ["pending", "processing", "processed", "failed"] }).notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Asset = typeof assets.$inferSelect;
 export type GenerationTask = typeof generationTasks.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;

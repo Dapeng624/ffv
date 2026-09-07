@@ -417,11 +417,11 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   height: 44px; padding: 0 12px; color: var(--text); border: 1px solid var(--border);
   border-radius: var(--radius-sm); background: #141512; font-size: 12px;
 }
-.auth-submit, .auth-link-button, .pricing-card button, .profile-card button {
+.auth-submit, .auth-link-button, .pricing-card button, .profile-card button, .membership-card button {
   height: 44px; display: inline-grid; place-items: center; border: 0; border-radius: var(--radius-sm);
   color: #151610; background: var(--acid); text-decoration: none; font-size: 12px; font-weight: 850; cursor: pointer;
 }
-.auth-submit:disabled, .pricing-card button:disabled { opacity: .6; cursor: wait; }
+.auth-submit:disabled, .pricing-card button:disabled, .membership-card button:disabled { opacity: .6; cursor: wait; }
 .form-error, .billing-error { color: var(--coral); font-size: 11px; }
 .simple-nav {
   width: min(1180px,100%); margin: 0 auto 56px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
@@ -432,24 +432,54 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
 .billing-hero h1 { max-width: 720px; margin: 0 0 14px; font-size: clamp(36px,5vw,66px); line-height: 1.04; }
 .billing-hero p:last-child { max-width: 620px; margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.8; }
 .billing-page .pricing-grid { width: min(1180px,100%); margin: 0 auto; }
+.membership-pricing-grid {
+  width: min(820px,100%); margin: 0 auto; display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px;
+}
 .pricing-card {
   min-height: 300px; padding: 22px; display: flex; flex-direction: column; gap: 18px;
   border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
+}
+.membership-price-card { position: relative; min-height: 390px; }
+.membership-price-card.featured { border-color: var(--acid); }
+.membership-badge {
+  position: absolute; top: 16px; right: 16px; padding: 6px 8px;
+  color: #151610; border-radius: var(--radius-sm); background: var(--acid); font-size: 10px; font-weight: 800;
 }
 .pricing-card div span, .pricing-card small { color: var(--text-faint); font-size: 11px; }
 .pricing-card strong { display: block; margin-top: 14px; color: var(--acid); font-size: 48px; line-height: .9; }
 .pricing-card p { min-height: 42px; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.7; }
 .pricing-card b { margin-top: auto; font-size: 20px; }
+.pricing-card b small { font-weight: 500; }
+.membership-price-card ul { margin: 0; padding: 14px 0 0; list-style: none; border-top: 1px solid var(--border); }
+.membership-price-card li { margin: 0 0 10px; color: var(--text-muted); font-size: 11px; }
+.membership-price-card li::before { content: "✓"; margin-right: 8px; color: var(--acid); font-weight: 900; }
+.monthly-equivalent { margin-top: -12px; color: var(--text-faint); font-size: 10px; }
+.billing-note, .billing-error { width: min(820px,100%); margin: 18px auto 0; }
+.billing-note { color: var(--text-faint); font-size: 10px; text-align: center; }
 .account-grid, .ledger-section { width: min(1180px,100%); margin: 0 auto; }
-.account-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 14px; margin-bottom: 34px; }
-.account-summary, .profile-card {
+.account-grid { display: grid; grid-template-columns: .8fr 1.25fr .9fr; gap: 14px; margin-bottom: 34px; }
+.account-summary, .membership-card, .profile-card {
   padding: 26px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
 }
 .account-summary h1 { margin: 0; color: var(--acid); font-size: 72px; line-height: .95; }
 .account-summary span, .profile-card p { display: block; margin: 10px 0 22px; color: var(--text-muted); font-size: 12px; }
 .account-summary a { color: var(--acid); text-decoration: none; font-size: 12px; font-weight: 800; }
 .profile-card h2 { margin: 0 0 8px; font-size: 28px; }
-.profile-card button { width: 120px; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); }
+.profile-card button, .membership-card button { width: 120px; background: var(--surface-soft); color: var(--text); border: 1px solid var(--border); }
+.membership-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.membership-title-row h2 { margin: 0; font-size: 25px; }
+.membership-status { padding: 5px 7px; border-radius: var(--radius-sm); color: var(--text-muted); background: var(--surface-soft); font-size: 9px; font-weight: 800; }
+.membership-status.status-active, .membership-status.status-trialing { color: #151610; background: var(--acid); }
+.membership-status.status-past_due, .membership-status.status-unpaid { color: var(--coral); }
+.membership-card > p { margin: 10px 0 18px; color: var(--text-muted); font-size: 11px; }
+.membership-card dl { margin: 0 0 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.membership-card dl div { padding-top: 10px; border-top: 1px solid var(--border); }
+.membership-card dt { margin-bottom: 5px; color: var(--text-faint); font-size: 9px; }
+.membership-card dd { margin: 0; font-size: 11px; font-weight: 800; }
+.membership-card > small { display: block; margin: -8px 0 14px; color: var(--coral); font-size: 9px; line-height: 1.5; }
+.membership-link { color: var(--acid); text-decoration: none; font-size: 12px; font-weight: 800; }
+.account-error { width: min(1180px,100%); margin: -18px auto 24px; color: var(--coral); font-size: 11px; }
 .ledger-list { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .ledger-row {
   min-height: 64px; padding: 12px 16px; display: grid; grid-template-columns: 1fr 90px 90px; align-items: center; gap: 16px;
@@ -540,6 +570,7 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
   .auth-page, .billing-page, .account-page { padding: 18px; }
   .simple-nav { margin-bottom: 36px; }
   .billing-page .pricing-grid { grid-template-columns: 1fr; }
+  .membership-pricing-grid { grid-template-columns: 1fr; }
   .ledger-row { grid-template-columns: 1fr auto; }
   .ledger-row small { display: none; }
   .site-footer { grid-template-columns: 1fr auto; }
