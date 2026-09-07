@@ -1,7 +1,7 @@
 import {
   getSubscriptionByProviderId,
   isSubscriptionStatus,
-  type StripeSubscriptionInput,
+  type ProviderSubscriptionInput,
 } from "@/lib/membership";
 import { findMembershipPlan, isMembershipPlanId, type MembershipPlanId } from "@/lib/membership-plans";
 import { requiredRuntimeEnv, runtimeEnv } from "@/lib/runtime-env";
@@ -54,7 +54,7 @@ export async function createStripeSubscriptionCheckout(input: {
 }) {
   const plan = findMembershipPlan(input.planId);
   if (!plan) throw new Error("PLAN_NOT_FOUND");
-  const priceId = requiredRuntimeEnv(plan.priceEnvName);
+  const priceId = requiredRuntimeEnv(plan.stripePriceEnvName);
   const appUrl = requiredRuntimeEnv("PUBLIC_APP_URL") || input.origin;
   const body = new URLSearchParams();
   body.set("mode", "subscription");
@@ -91,8 +91,8 @@ export function retrieveStripeSubscription(subscriptionId: string) {
   return stripeRequest<StripeSubscription>(`/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, { method: "GET" });
 }
 
-export async function normalizeStripeSubscription(subscription: StripeSubscription, eventTime: Date): Promise<StripeSubscriptionInput> {
-  const existing = await getSubscriptionByProviderId(subscription.id);
+export async function normalizeStripeSubscription(subscription: StripeSubscription, eventTime: Date): Promise<ProviderSubscriptionInput> {
+  const existing = await getSubscriptionByProviderId("stripe", subscription.id);
   const item = subscription.items?.data?.[0];
   const priceId = item?.price?.id;
   const metadata = subscription.metadata ?? {};
@@ -111,6 +111,7 @@ export async function normalizeStripeSubscription(subscription: StripeSubscripti
   if (!currentPeriodStart || !currentPeriodEnd || !startedAt) throw new Error("SUBSCRIPTION_PERIOD_MISSING");
 
   return {
+    provider: "stripe",
     userId,
     providerSubscriptionId: subscription.id,
     providerCustomerId: customerId,

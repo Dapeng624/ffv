@@ -4,6 +4,7 @@ import {
   findMembershipPlan,
   type MembershipPlanId,
 } from "@/lib/membership-plans";
+import type { PaymentProvider } from "@/lib/payment-providers";
 
 export type SubscriptionStatus =
   | "incomplete"
@@ -15,7 +16,8 @@ export type SubscriptionStatus =
   | "unpaid"
   | "paused";
 
-export type StripeSubscriptionInput = {
+export type ProviderSubscriptionInput = {
+  provider: PaymentProvider;
   userId: string;
   providerSubscriptionId: string;
   providerCustomerId: string;
@@ -32,6 +34,7 @@ export type StripeSubscriptionInput = {
 type SubscriptionRow = {
   id: string;
   user_id: string;
+  provider: PaymentProvider;
   provider_subscription_id: string;
   provider_customer_id: string;
   plan_id: MembershipPlanId;
@@ -54,68 +57,83 @@ export function isSubscriptionStatus(value: string): value is SubscriptionStatus
   return ["incomplete", "incomplete_expired", "trialing", "active", "past_due", "canceled", "unpaid", "paused"].includes(value);
 }
 
-export async function recordSubscriptionCheckout(input: { userId: string; sessionId: string; planId: MembershipPlanId }) {
+export async function recordSubscriptionCheckout(input: {
+  provider: PaymentProvider;
+  userId: string;
+  sessionId: string;
+  planId: MembershipPlanId;
+}) {
   await env.DB.prepare(
-    `INSERT INTO subscription_checkouts (id, user_id, provider_session_id, plan_id)
-     VALUES (?, ?, ?, ?)`,
+    `INSERT INTO subscription_checkouts (id, user_id, provider, provider_session_id, plan_id)
+     VALUES (?, ?, ?, ?, ?)`,
   )
-    .bind(crypto.randomUUID(), input.userId, input.sessionId, input.planId)
+    .bind(crypto.randomUUID(), input.userId, input.provider, input.sessionId, input.planId)
     .run();
 }
 
-export async function completeSubscriptionCheckout(sessionId: string) {
+export async function completeSubscriptionCheckout(provider: PaymentProvider, sessionId: string) {
   await env.DB.prepare(
-    "UPDATE subscription_checkouts SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE provider_session_id = ?",
+    `UPDATE subscription_checkouts SET status = 'completed', updated_at = CURRENT_TIMESTAMP
+     WHERE provider = ? AND provider_session_id = ?`,
   )
-    .bind(sessionId)
+    .bind(provider, sessionId)
     .run();
 }
 
-export async function expireSubscriptionCheckout(sessionId: string) {
+export async function expireSubscriptionCheckout(provider: PaymentProvider, sessionId: string) {
   await env.DB.prepare(
-    "UPDATE subscription_checkouts SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE provider_session_id = ?",
+    `UPDATE subscription_checkouts SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+     WHERE provider = ? AND provider_session_id = ?`,
   )
-    .bind(sessionId)
+    .bind(provider, sessionId)
     .run();
 }
 
-export async function getStripeCustomerId(userId: string) {
+export async function getProviderCustomerId(userId: string, provider: PaymentProvider) {
   const row = await env.DB.prepare(
-    "SELECT provider_customer_id FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1",
+    `SELECT provider_customer_id FROM subscriptions
+     WHERE user_id = ? AND provider = ? ORDER BY updated_at DESC LIMIT 1`,
   )
-    .bind(userId)
+    .bind(userId, provider)
     .first<{ provider_customer_id: string }>();
   return row?.provider_customer_id ?? null;
 }
 
-export async function getSubscriptionByProviderId(providerSubscriptionId: string) {
-  return env.DB.prepare("SELECT * FROM subscriptions WHERE provider_subscription_id = ? LIMIT 1")
-    .bind(providerSubscriptionId)
+export async function getSubscriptionByProviderId(provider: PaymentProvider, providerSubscriptionId: string) {
+  return env.DB.prepare(
+    "SELECT * FROM subscriptions WHERE provider = ? AND provider_subscription_id = ? LIMIT 1",
+  )
+    .bind(provider, providerSubscriptionId)
     .first<SubscriptionRow>();
 }
 
 export async function hasManageableSubscription(userId: string) {
   const row = await env.DB.prepare(
-    `SELECT id FROM subscriptions
-     WHERE user_id = ? AND status IN ('incomplete', 'trialing', 'active', 'past_due', 'unpaid', 'paused')
-     ORDER BY updated_at DESC LIMIT 1`,
+    `SELECT id FROM (
+       SELECT id, updated_at FROM subscriptions
+       WHERE user_id = ? AND status IN ('incomplete', 'trialing', 'active', 'past_due', 'unpaid', 'paused')
+       UNION ALL
+       SELECT id, updated_at FROM subscription_checkouts
+       WHERE user_id = ? AND status = 'pending' AND created_at >= datetime('now', '-30 minutes')
+     ) ORDER BY updated_at DESC LIMIT 1`,
   )
-    .bind(userId)
+    .bind(userId, userId)
     .first<{ id: string }>();
   return Boolean(row);
 }
 
-export async function upsertStripeSubscription(input: StripeSubscriptionInput) {
-  const existing = await getSubscriptionByProviderId(input.providerSubscriptionId);
+export async function upsertProviderSubscription(input: ProviderSubscriptionInput) {
+  const existing = await getSubscriptionByProviderId(input.provider, input.providerSubscriptionId);
   const id = existing?.id ?? crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO subscriptions
-      (id, user_id, provider_subscription_id, provider_customer_id, plan_id, status,
+      (id, user_id, provider, provider_subscription_id, provider_customer_id, plan_id, status,
        cancel_at_period_end, started_at, current_period_start, current_period_end,
        next_credit_grant_at, credits_granted_periods, ended_at, provider_event_created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
      ON CONFLICT(provider_subscription_id) DO UPDATE SET
        user_id = excluded.user_id,
+       provider = excluded.provider,
        provider_customer_id = excluded.provider_customer_id,
        plan_id = excluded.plan_id,
        status = excluded.status,
@@ -126,10 +144,11 @@ export async function upsertStripeSubscription(input: StripeSubscriptionInput) {
        provider_event_created_at = excluded.provider_event_created_at,
        updated_at = CURRENT_TIMESTAMP
      WHERE excluded.provider_event_created_at >= subscriptions.provider_event_created_at`,
-  )
+    )
     .bind(
       id,
       input.userId,
+      input.provider,
       input.providerSubscriptionId,
       input.providerCustomerId,
       input.planId,
@@ -183,8 +202,12 @@ export async function reconcileAllDueSubscriptionCredits(now = new Date()) {
   return granted;
 }
 
-export async function reconcileSubscriptionCreditsByProviderId(providerSubscriptionId: string, now = new Date()) {
-  const subscription = await getSubscriptionByProviderId(providerSubscriptionId);
+export async function reconcileSubscriptionCreditsByProviderId(
+  provider: PaymentProvider,
+  providerSubscriptionId: string,
+  now = new Date(),
+) {
+  const subscription = await getSubscriptionByProviderId(provider, providerSubscriptionId);
   if (!subscription || !ACTIVE_STATUSES.has(subscription.status)) return 0;
   return reconcileOneSubscription(subscription, now);
 }
@@ -194,7 +217,7 @@ async function reconcileOneSubscription(initial: SubscriptionRow, now: Date) {
   for (let guard = 0; guard < 24; guard += 1) {
     const subscription = guard === 0
       ? initial
-      : await getSubscriptionByProviderId(initial.provider_subscription_id);
+      : await getSubscriptionByProviderId(initial.provider, initial.provider_subscription_id);
     if (!subscription || !ACTIVE_STATUSES.has(subscription.status)) break;
 
     const dueAt = new Date(subscription.next_credit_grant_at);
@@ -269,6 +292,7 @@ export async function getMembershipSummary(userId: string) {
   const plan = findMembershipPlan(row.plan_id);
   return {
     id: row.id,
+    provider: row.provider,
     planId: row.plan_id,
     planName: plan?.name ?? row.plan_id,
     status: row.status,
@@ -281,41 +305,43 @@ export async function getMembershipSummary(userId: string) {
   };
 }
 
-export async function claimStripeEvent(eventId: string, eventType: string) {
+export async function claimPaymentEvent(provider: PaymentProvider, eventId: string, eventType: string) {
+  const id = `${provider}:${eventId}`;
   await env.DB.prepare(
-    `INSERT OR IGNORE INTO stripe_webhook_events (event_id, event_type, status)
-     VALUES (?, ?, 'pending')`,
+    `INSERT OR IGNORE INTO payment_webhook_events
+      (id, provider, provider_event_id, event_type, status)
+     VALUES (?, ?, ?, ?, 'pending')`,
   )
-    .bind(eventId, eventType)
+    .bind(id, provider, eventId, eventType)
     .run();
   const claimed = await env.DB.prepare(
-    `UPDATE stripe_webhook_events
+    `UPDATE payment_webhook_events
      SET status = 'processing', attempts = attempts + 1, last_error = NULL, updated_at = CURRENT_TIMESTAMP
-     WHERE event_id = ? AND (
+     WHERE id = ? AND (
        status IN ('pending', 'failed') OR
        (status = 'processing' AND updated_at < datetime('now', '-10 minutes'))
      )
-     RETURNING event_id`,
+     RETURNING provider_event_id`,
   )
-    .bind(eventId)
-    .first<{ event_id: string }>();
+    .bind(id)
+    .first<{ provider_event_id: string }>();
   return Boolean(claimed);
 }
 
-export async function markStripeEventProcessed(eventId: string) {
+export async function markPaymentEventProcessed(provider: PaymentProvider, eventId: string) {
   await env.DB.prepare(
-    "UPDATE stripe_webhook_events SET status = 'processed', updated_at = CURRENT_TIMESTAMP WHERE event_id = ?",
+    "UPDATE payment_webhook_events SET status = 'processed', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   )
-    .bind(eventId)
+    .bind(`${provider}:${eventId}`)
     .run();
 }
 
-export async function markStripeEventFailed(eventId: string, error: string) {
+export async function markPaymentEventFailed(provider: PaymentProvider, eventId: string, error: string) {
   await env.DB.prepare(
-    `UPDATE stripe_webhook_events
-     SET status = 'failed', last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE event_id = ?`,
+    `UPDATE payment_webhook_events
+     SET status = 'failed', last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
   )
-    .bind(error.slice(0, 500), eventId)
+    .bind(error.slice(0, 500), `${provider}:${eventId}`)
     .run();
 }
 

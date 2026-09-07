@@ -145,6 +145,7 @@ async function initializeCoreSchema() {
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS subscription_checkouts (
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT NOT NULL REFERENCES users(id),
+      provider TEXT NOT NULL DEFAULT 'stripe',
       provider_session_id TEXT NOT NULL UNIQUE,
       plan_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
@@ -161,11 +162,31 @@ async function initializeCoreSchema() {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS payment_webhook_events (
+      id TEXT PRIMARY KEY NOT NULL,
+      provider TEXT NOT NULL,
+      provider_event_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(provider, provider_event_id)
+    )`),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payment_webhook_provider_event ON payment_webhook_events (provider, provider_event_id)"),
   ]);
 
   await addColumnIfMissing("generation_tasks", "credit_transaction_id", "TEXT");
   await addColumnIfMissing("generation_tasks", "credits_refunded_at", "TEXT");
   await addColumnIfMissing("subscriptions", "provider_event_created_at", "TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'");
+  await addColumnIfMissing("subscription_checkouts", "provider", "TEXT NOT NULL DEFAULT 'stripe'");
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO payment_webhook_events
+      (id, provider, provider_event_id, event_type, status, attempts, last_error, created_at, updated_at)
+     SELECT 'stripe:' || event_id, 'stripe', event_id, event_type, status, attempts, last_error, created_at, updated_at
+     FROM stripe_webhook_events`,
+  ).run();
 }
 
 async function addColumnIfMissing(table: string, column: string, definition: string) {

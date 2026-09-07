@@ -1,13 +1,13 @@
 import { ensureCoreSchema } from "@/db";
 import {
-  claimStripeEvent,
+  claimPaymentEvent,
   completeSubscriptionCheckout,
   expireSubscriptionCheckout,
-  markStripeEventFailed,
-  markStripeEventProcessed,
+  markPaymentEventFailed,
+  markPaymentEventProcessed,
   reconcileSubscriptionCredits,
   reconcileSubscriptionCreditsByProviderId,
-  upsertStripeSubscription,
+  upsertProviderSubscription,
 } from "@/lib/membership";
 import {
   normalizeStripeSubscription,
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     await ensureCoreSchema();
     const event = await verifyStripeWebhook(request);
     eventId = event.id;
-    if (!(await claimStripeEvent(event.id, event.type))) return Response.json({ received: true });
+    if (!(await claimPaymentEvent("stripe", event.id, event.type))) return Response.json({ received: true });
 
     const eventTime = event.created ? new Date(event.created * 1000) : new Date();
     if (event.type === "checkout.session.completed") {
@@ -33,11 +33,11 @@ export async function POST(request: Request) {
       const subscriptionId = stripeSubscriptionId(session.subscription);
       if (session.mode === "subscription" && subscriptionId) {
         await syncSubscription(await retrieveStripeSubscription(subscriptionId), eventTime);
-        await completeSubscriptionCheckout(session.id);
+        await completeSubscriptionCheckout("stripe", session.id);
       }
     } else if (event.type === "checkout.session.expired") {
       const session = event.data.object as StripeCheckoutSession;
-      await expireSubscriptionCheckout(session.id);
+      await expireSubscriptionCheckout("stripe", session.id);
     } else if (event.type.startsWith("customer.subscription.")) {
       await syncSubscription(event.data.object as unknown as StripeSubscription, eventTime);
     } else if (event.type === "invoice.paid" || event.type === "invoice.payment_failed") {
@@ -45,18 +45,18 @@ export async function POST(request: Request) {
       if (subscriptionId) await syncSubscription(await retrieveStripeSubscription(subscriptionId), eventTime);
     }
 
-    await markStripeEventProcessed(event.id);
+    await markPaymentEventProcessed("stripe", event.id);
     return Response.json({ received: true });
   } catch (error) {
     const code = error instanceof Error ? error.message : "WEBHOOK_FAILED";
-    if (eventId) await markStripeEventFailed(eventId, code).catch(() => undefined);
+    if (eventId) await markPaymentEventFailed("stripe", eventId, code).catch(() => undefined);
     return Response.json({ error: { code, message: "Webhook 处理失败" } }, { status: 400 });
   }
 }
 
 async function syncSubscription(subscription: StripeSubscription, eventTime: Date) {
-  await reconcileSubscriptionCreditsByProviderId(subscription.id, eventTime);
+  await reconcileSubscriptionCreditsByProviderId("stripe", subscription.id, eventTime);
   const normalized = await normalizeStripeSubscription(subscription, eventTime);
-  await upsertStripeSubscription(normalized);
+  await upsertProviderSubscription(normalized);
   await reconcileSubscriptionCredits(normalized.userId, eventTime);
 }

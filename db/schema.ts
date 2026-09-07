@@ -175,6 +175,7 @@ export const subscriptionCheckouts = sqliteTable(
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull().references(() => users.id),
+    provider: text("provider", { enum: ["creem", "stripe"] }).notNull().default("stripe"),
     providerSessionId: text("provider_session_id").notNull().unique(),
     planId: text("plan_id", { enum: ["monthly", "yearly"] }).notNull(),
     status: text("status", { enum: ["pending", "completed", "expired"] }).notNull().default("pending"),
@@ -193,6 +194,24 @@ export const stripeWebhookEvents = sqliteTable("stripe_webhook_events", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const paymentWebhookEvents = sqliteTable(
+  "payment_webhook_events",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider", { enum: ["creem", "stripe"] }).notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    eventType: text("event_type").notNull(),
+    status: text("status", { enum: ["pending", "processing", "processed", "failed"] }).notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_payment_webhook_provider_event").on(table.provider, table.providerEventId),
+  ],
+);
 
 export type Asset = typeof assets.$inferSelect;
 export type GenerationTask = typeof generationTasks.$inferSelect;

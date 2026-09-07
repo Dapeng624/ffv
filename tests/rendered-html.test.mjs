@@ -68,6 +68,8 @@ test("exposes monthly and yearly memberships with monthly credit installments", 
   assert.equal(yearly.interval, "year");
   assert.equal(yearly.creditsPerMonth, 200);
   assert.equal(yearly.creditsPerYear, 2400);
+  assert.deepEqual(payload.providers.map((provider) => provider.id), ["creem", "stripe"]);
+  assert.equal(payload.providers[0].recommended, true);
 });
 
 test("keeps subscription billing idempotent and reconciles annual installments", async () => {
@@ -90,4 +92,31 @@ test("keeps subscription billing idempotent and reconciles annual installments",
   assert.match(worker, /async scheduled/);
   assert.match(envExample, /STRIPE_MONTHLY_PRICE_ID=/);
   assert.match(envExample, /STRIPE_YEARLY_PRICE_ID=/);
+});
+
+test("supports Creem and Stripe through one provider-neutral billing flow", async () => {
+  const [billing, checkout, membership, creem, creemWebhook, pricing, envExample] = await Promise.all([
+    readFile(new URL("../lib/billing.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/checkout/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/membership.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/creem.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/creem/webhook/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/pricing/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(billing, /provider === "creem"/);
+  assert.match(checkout, /isPaymentProvider/);
+  assert.match(checkout, /hasManageableSubscription/);
+  assert.match(membership, /payment_webhook_events/);
+  assert.match(creem, /https:\/\/test-api\.creem\.io/);
+  assert.match(creem, /creem-signature/);
+  assert.match(creem, /HMAC/);
+  assert.match(creemWebhook, /checkout\.completed/);
+  assert.match(creemWebhook, /subscription\./);
+  assert.match(pricing, /setProvider/);
+  assert.match(envExample, /CREEM_API_KEY=/);
+  assert.match(envExample, /CREEM_WEBHOOK_SECRET=/);
+  assert.match(envExample, /CREEM_MONTHLY_PRODUCT_ID=/);
+  assert.match(envExample, /CREEM_YEARLY_PRODUCT_ID=/);
 });

@@ -13,6 +13,7 @@ type CreditTransaction = {
   created_at: string;
 };
 type Membership = {
+  provider: "creem" | "stripe";
   planId: "monthly" | "yearly";
   planName: string;
   status: string;
@@ -97,12 +98,13 @@ export default function AccountPage() {
             <>
               <p>每月 {membership.creditsPerMonth} 积分 · 全年权益 {membership.creditsPerYear} 积分</p>
               <dl>
+                <div><dt>支付平台</dt><dd>{providerName(membership.provider)}</dd></div>
                 <div><dt>下次积分到账</dt><dd>{formatDate(membership.nextCreditGrantAt)}</dd></div>
                 <div><dt>{membership.cancelAtPeriodEnd ? "会员到期" : "下次续费"}</dt><dd>{formatDate(membership.currentPeriodEnd)}</dd></div>
               </dl>
               {membership.cancelAtPeriodEnd && <small>已取消自动续订，当前权益保留至到期日。</small>}
               <button type="button" disabled={portalLoading} onClick={() => void openBillingPortal()}>
-                {portalLoading ? "正在打开..." : "管理订阅"}
+                {portalLoading ? "正在打开..." : `前往 ${providerName(membership.provider)} 管理`}
               </button>
             </>
           ) : (
@@ -162,6 +164,10 @@ function membershipStatus(status?: string) {
     incomplete_expired: "未完成",
   };
   return status ? labels[status] ?? status : "未订阅";
+}
+
+function providerName(provider: Membership["provider"]) {
+  return provider === "creem" ? "Creem" : "Stripe";
 }
 
 function formatDate(value: string) {

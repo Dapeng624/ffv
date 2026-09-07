@@ -9,7 +9,8 @@ export type MembershipPlan = {
   intervalLabel: string;
   creditsPerMonth: number;
   creditsPerYear: number;
-  priceEnvName: "STRIPE_MONTHLY_PRICE_ID" | "STRIPE_YEARLY_PRICE_ID";
+  stripePriceEnvName: "STRIPE_MONTHLY_PRICE_ID" | "STRIPE_YEARLY_PRICE_ID";
+  creemProductEnvName: "CREEM_MONTHLY_PRODUCT_ID" | "CREEM_YEARLY_PRODUCT_ID";
   description: string;
 };
 
@@ -25,7 +26,8 @@ const plans: MembershipPlan[] = [
     intervalLabel: "月",
     creditsPerMonth: MEMBERSHIP_CREDITS_PER_MONTH,
     creditsPerYear: MEMBERSHIP_CREDITS_PER_MONTH * 12,
-    priceEnvName: "STRIPE_MONTHLY_PRICE_ID",
+    stripePriceEnvName: "STRIPE_MONTHLY_PRICE_ID",
+    creemProductEnvName: "CREEM_MONTHLY_PRODUCT_ID",
     description: "每月自动续费，每个会员月发放 200 积分",
   },
   {
@@ -37,7 +39,8 @@ const plans: MembershipPlan[] = [
     intervalLabel: "年",
     creditsPerMonth: MEMBERSHIP_CREDITS_PER_MONTH,
     creditsPerYear: MEMBERSHIP_CREDITS_PER_MONTH * 12,
-    priceEnvName: "STRIPE_YEARLY_PRICE_ID",
+    stripePriceEnvName: "STRIPE_YEARLY_PRICE_ID",
+    creemProductEnvName: "CREEM_YEARLY_PRODUCT_ID",
     description: "每年自动续费，2400 积分按月分 12 次发放",
   },
 ];

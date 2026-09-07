@@ -123,6 +123,29 @@ Configure the Stripe webhook endpoint at `/api/billing/webhook` for
 The customer portal must also be enabled in Stripe before users can manage or
 cancel subscriptions.
 
+Creem is available as a second subscription provider. Create one recurring
+monthly product for USD 9.90 and one recurring yearly product for USD 99, then
+configure these Worker runtime variables and secrets:
+
+```text
+CREEM_TEST_MODE=true
+CREEM_API_KEY=<server-side Creem API key>
+CREEM_WEBHOOK_SECRET=<Creem webhook signing secret>
+CREEM_MONTHLY_PRODUCT_ID=<USD 9.90 recurring monthly Product ID>
+CREEM_YEARLY_PRODUCT_ID=<USD 99 recurring yearly Product ID>
+```
+
+Use `true` with Creem test products and test API keys. Switch all Creem values
+to their live equivalents and set `CREEM_TEST_MODE=false` before accepting real
+payments. Configure the Creem webhook endpoint at
+`/api/billing/creem/webhook`. Subscribe to `checkout.completed` and all
+`subscription.*` lifecycle events. Keep the endpoint public so Creem can
+deliver and retry signed notifications.
+
+Stripe and Creem both update the same subscription and credit ledger. A user
+with an active or recoverable subscription cannot start another subscription
+through a different provider.
+
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)

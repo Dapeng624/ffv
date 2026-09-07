@@ -46,6 +46,11 @@ export default defineConfig(async ({ mode }) => {
       "STRIPE_WEBHOOK_SECRET",
       "STRIPE_MONTHLY_PRICE_ID",
       "STRIPE_YEARLY_PRICE_ID",
+      "CREEM_TEST_MODE",
+      "CREEM_API_KEY",
+      "CREEM_WEBHOOK_SECRET",
+      "CREEM_MONTHLY_PRODUCT_ID",
+      "CREEM_YEARLY_PRODUCT_ID",
     ]
       .map((name) => [name, localEnv[name]])
       .filter((entry): entry is [string, string] => Boolean(entry[1])),
