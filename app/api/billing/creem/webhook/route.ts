@@ -2,21 +2,22 @@ import { ensureCoreSchema } from "@/db";
 import {
   creemEventTime,
   creemSubscriptionId,
-  normalizeCreemSubscription,
   retrieveCreemSubscription,
   verifyCreemWebhook,
   type CreemCheckout,
   type CreemSubscription,
 } from "@/lib/creem";
 import {
+  isCompleteSubscription,
+  mergeCheckoutReferences,
+  syncCreemSubscription,
+} from "@/lib/creem-reconciliation";
+import {
   claimPaymentEvent,
   completeSubscriptionCheckout,
   expireSubscriptionCheckout,
   markPaymentEventFailed,
   markPaymentEventProcessed,
-  reconcileSubscriptionCredits,
-  reconcileSubscriptionCreditsByProviderId,
-  upsertProviderSubscription,
 } from "@/lib/membership";
 
 export async function POST(request: Request) {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         const subscription = isCompleteSubscription(checkout.subscription)
           ? checkout.subscription
           : await retrieveCreemSubscription(subscriptionId);
-        await syncSubscription(
+        await syncCreemSubscription(
           mergeCheckoutReferences(subscription, checkout),
           eventTime,
           event.eventType,
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     } else if (event.eventType === "checkout.expired") {
       await expireSubscriptionCheckout("creem", String(event.object.id ?? ""));
     } else if (event.eventType.startsWith("subscription.")) {
-      await syncSubscription(event.object as CreemSubscription, eventTime, event.eventType);
+      await syncCreemSubscription(event.object as CreemSubscription, eventTime, event.eventType);
     }
 
     await markPaymentEventProcessed("creem", event.id);
@@ -58,33 +59,4 @@ export async function POST(request: Request) {
     if (eventId) await markPaymentEventFailed("creem", eventId, code).catch(() => undefined);
     return Response.json({ error: { code, message: "Webhook 处理失败" } }, { status: 400 });
   }
-}
-
-async function syncSubscription(
-  subscription: CreemSubscription,
-  eventTime: Date,
-  eventType: string,
-  fallbackMetadata?: Record<string, unknown>,
-) {
-  await reconcileSubscriptionCreditsByProviderId("creem", subscription.id, eventTime);
-  const normalized = await normalizeCreemSubscription(subscription, eventTime, eventType, fallbackMetadata);
-  await upsertProviderSubscription(normalized);
-  await reconcileSubscriptionCredits(normalized.userId, eventTime);
-}
-
-function isCompleteSubscription(value: CreemCheckout["subscription"]): value is CreemSubscription {
-  return Boolean(
-    value
-    && typeof value === "object"
-    && "id" in value
-    && ("current_period_end_date" in value || "next_transaction_date" in value),
-  );
-}
-
-function mergeCheckoutReferences(subscription: CreemSubscription, checkout: CreemCheckout): CreemSubscription {
-  return {
-    ...subscription,
-    customer: subscription.customer ?? checkout.customer,
-    product: subscription.product ?? checkout.product,
-  };
 }

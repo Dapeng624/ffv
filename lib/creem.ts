@@ -99,6 +99,13 @@ export function retrieveCreemSubscription(subscriptionId: string) {
   );
 }
 
+export function retrieveCreemCheckout(checkoutId: string) {
+  return creemRequest<CreemCheckout>(
+    `/v1/checkouts?checkout_id=${encodeURIComponent(checkoutId)}`,
+    { method: "GET" },
+  );
+}
+
 export async function normalizeCreemSubscription(
   subscription: CreemSubscription,
   eventTime: Date,

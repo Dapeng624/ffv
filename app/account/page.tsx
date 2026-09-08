@@ -30,17 +30,54 @@ export default function AccountPage() {
   const [membership, setMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [checkoutState, setCheckoutState] = useState<"idle" | "syncing" | "success">("idle");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/me", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((payload: { user?: User | null; credits?: { transactions?: CreditTransaction[] } | null; membership?: Membership | null }) => {
-        setUser(payload.user ?? null);
-        setTransactions(payload.credits?.transactions ?? []);
-        setMembership(payload.membership ?? null);
-      })
-      .finally(() => setLoading(false));
+    let active = true;
+    async function initializeAccount() {
+      const params = new URLSearchParams(window.location.search);
+      const isCreemReturn = params.get("checkout") === "success" && params.get("provider") === "creem";
+      const checkoutId = params.get("checkout_id");
+      try {
+        if (isCreemReturn && checkoutId) {
+          setCheckoutState("syncing");
+          const response = await fetch("/api/billing/creem/reconcile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ checkoutId }),
+          });
+          const payload = (await response.json()) as { error?: { message?: string } };
+          if (!response.ok) throw new Error(payload.error?.message ?? "会员同步失败，请稍后重试");
+          if (active) {
+            setCheckoutState("success");
+            window.history.replaceState({}, "", "/account");
+          }
+        }
+      } catch (accountError) {
+        if (active) setError(accountError instanceof Error ? accountError.message : "会员同步失败，请稍后重试");
+      }
+
+      try {
+        const response = await fetch("/api/me", { cache: "no-store" });
+        const payload = (await response.json()) as {
+          user?: User | null;
+          credits?: { transactions?: CreditTransaction[] } | null;
+          membership?: Membership | null;
+        };
+        if (active) {
+          setUser(payload.user ?? null);
+          setTransactions(payload.credits?.transactions ?? []);
+          setMembership(payload.membership ?? null);
+        }
+      } catch (accountError) {
+        if (active) setError((current) => current || (accountError instanceof Error ? accountError.message : "账户信息加载失败"));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void initializeAccount();
+    return () => { active = false; };
   }, []);
 
   async function logout() {
@@ -65,10 +102,12 @@ export default function AccountPage() {
   if (!loading && !user) {
     return (
       <main className="account-page">
+        <AccountNavigation />
         <section className="auth-panel compact">
           <p className="eyebrow">ACCOUNT</p>
           <h1>请先登录</h1>
           <p>登录后可以查看积分余额、支付记录和生成任务。</p>
+          {error && <p className="form-error">{error}</p>}
           <Link className="auth-link-button" href="/auth">去登录</Link>
         </section>
       </main>
@@ -77,10 +116,9 @@ export default function AccountPage() {
 
   return (
     <main className="account-page">
-      <header className="simple-nav">
-        <Link className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
-        <nav><Link href="/studio">工作台</Link><Link href="/pricing">会员方案</Link></nav>
-      </header>
+      <AccountNavigation />
+      {checkoutState === "syncing" && <p className="checkout-notice">正在向 Creem 确认付款并发放会员积分...</p>}
+      {checkoutState === "success" && <p className="checkout-notice success">付款已确认，会员和本月 200 积分已经到账。</p>}
       <section className="account-grid">
         <article className="account-summary">
           <p className="eyebrow">BALANCE</p>
@@ -137,6 +175,15 @@ export default function AccountPage() {
         ) : <div className="empty-tasks"><strong>暂无积分流水</strong><span>注册赠送、购买入账和生成扣费会记录在这里。</span></div>}
       </section>
     </main>
+  );
+}
+
+function AccountNavigation() {
+  return (
+    <header className="simple-nav">
+      <Link className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
+      <nav><Link href="/">首页</Link><Link href="/studio">工作台</Link><Link href="/pricing">会员方案</Link></nav>
+    </header>
   );
 }
 

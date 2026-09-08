@@ -127,3 +127,21 @@ test("supports Creem and Stripe through one provider-neutral billing flow", asyn
   assert.match(viteConfig, /keep_vars: true/);
   assert.match(viteConfig, /workerVars\.PUBLIC_APP_URL \?\?=/);
 });
+
+test("reconciles a verified Creem checkout when the customer returns", async () => {
+  const [account, route, reconciliation, creem] = await Promise.all([
+    readFile(new URL("../app/account/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/creem/reconcile/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/creem-reconciliation.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/creem.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(account, /params\.get\("checkout_id"\)/);
+  assert.match(account, /\/api\/billing\/creem\/reconcile/);
+  assert.match(account, /付款已确认，会员和本月 200 积分已经到账/);
+  assert.match(route, /requireUser/);
+  assert.match(reconciliation, /checkout\.metadata\?\.userId !== userId/);
+  assert.match(reconciliation, /checkout\.status !== "completed"/);
+  assert.match(reconciliation, /reconcileSubscriptionCredits/);
+  assert.match(creem, /\/v1\/checkouts\?checkout_id=/);
+});
