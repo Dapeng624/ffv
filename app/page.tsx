@@ -59,10 +59,10 @@ export default function Home() {
         <HomeAccountActions />
       </header>
 
-      <div className="benchmark-promo">AI 视频生成平台：把文字和图片转化为电影感视频 <a href="/auth?mode=register">免费体验</a></div>
+      <div className="benchmark-promo">注册即享 20 积分，把文字和图片转化为电影感视频 <a href="/auth?mode=register">免费体验</a></div>
 
       <section className="benchmark-hero" id="top">
-        <div className="benchmark-hero-copy"><h1>映作，革新视频创作</h1><p>用映作的前沿技术，解锁电影级 AI 视频解决方案</p></div>
+        <div className="benchmark-hero-copy"><h1>映作，革新视频创作</h1><p>从一句描述到电影感画面，让每一帧更接近你的想象</p></div>
         <a className="benchmark-product-shot" href="/studio" aria-label="打开映作视频工作台"><img src="/images/studio-preview.png" alt="映作 AI 视频生成工作台界面" /></a>
       </section>
 
