@@ -358,7 +358,7 @@ export default function Home() {
         ))}</div> : <div className="empty-tasks"><strong>还没有生成任务</strong><span>创建第一条任务后，排队、进度和结果都会保存在这里。</span></div>}
       </section>
 
-      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CREDITS & BILLING</p><h2>账号、积分和支付已经接入</h2></div><p>登录用户可以保存素材和任务，生成前预扣积分，失败后自动退回。积分可在价格页通过 Stripe Checkout 购买。</p><Link href="/pricing">购买积分 ↗</Link></section>
+      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CREDITS & BILLING</p><h2>账号、积分和支付已经接入</h2></div><p>登录用户可以保存素材和任务，生成前预扣积分，失败后自动退回。订阅会员后每月获得积分，可通过 Creem 或 Stripe 管理付款。</p><Link href="/pricing">查看会员方案 ↗</Link></section>
       <footer className="site-footer"><a className="brand" href="#top"><span className="brand-mark">Y</span><span>映作</span></a><p>核心功能开发版</p><span>CORE V0.2</span></footer>
     </main>
   );
