@@ -97,7 +97,7 @@ test("keeps subscription billing idempotent and reconciles annual installments",
 });
 
 test("supports Creem and Stripe through one provider-neutral billing flow", async () => {
-  const [billing, checkout, membership, creem, creemWebhook, providersRoute, pricing, envExample] = await Promise.all([
+  const [billing, checkout, membership, creem, creemWebhook, providersRoute, pricing, envExample, viteConfig] = await Promise.all([
     readFile(new URL("../lib/billing.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/billing/checkout/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/membership.ts", import.meta.url), "utf8"),
@@ -106,6 +106,7 @@ test("supports Creem and Stripe through one provider-neutral billing flow", asyn
     readFile(new URL("../app/api/billing/providers/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/pricing/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
+    readFile(new URL("../vite.config.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(billing, /provider === "creem"/);
@@ -123,4 +124,6 @@ test("supports Creem and Stripe through one provider-neutral billing flow", asyn
   assert.match(envExample, /CREEM_WEBHOOK_SECRET=/);
   assert.match(envExample, /CREEM_MONTHLY_PRODUCT_ID=/);
   assert.match(envExample, /CREEM_YEARLY_PRODUCT_ID=/);
+  assert.match(viteConfig, /keep_vars: true/);
+  assert.match(viteConfig, /workerVars\.PUBLIC_APP_URL \?\?=/);
 });

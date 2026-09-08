@@ -52,12 +52,15 @@ export default defineConfig(async ({ mode }) => {
       "CREEM_MONTHLY_PRODUCT_ID",
       "CREEM_YEARLY_PRODUCT_ID",
     ]
-      .map((name) => [name, localEnv[name]])
+      .map((name) => [name, process.env[name] ?? localEnv[name]])
       .filter((entry): entry is [string, string] => Boolean(entry[1])),
   );
+  workerVars.PUBLIC_APP_URL ??= "https://video.aitodoall.com";
 
   const localBindingConfig = {
     main: "./worker/index.ts",
+    // Dashboard-managed runtime values must survive Git-triggered deployments.
+    keep_vars: true,
     compatibility_flags: ["nodejs_compat"],
     vars: workerVars,
     d1_databases: d1
