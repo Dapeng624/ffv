@@ -1,9 +1,9 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element -- The generator renders user-uploaded blob and protected asset URLs. */
+/* eslint-disable @next/next/no-html-link-for-pages -- Full page navigation is more reliable on the Cloudflare vinext deployment. */
 
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 
 type GenerationMode = "text-to-video" | "image-to-video" | "first-last-frame" | "motion-control" | "video-to-video";
 type TaskStatus = "queued" | "processing" | "succeeded" | "failed";
@@ -236,14 +236,14 @@ export default function Home() {
   return (
     <main className="app-shell">
       <header className="topbar" id="top">
-        <Link className="brand" href="/" aria-label="返回映作首页"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
+        <a className="brand" href="/" aria-label="返回映作首页"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></a>
         <nav className="primary-nav" aria-label="主要导航">
-          <Link href="/">首页</Link><a className="active" href="#create">生成</a><a href="#templates">模板</a><a href="#works">任务</a><Link href="/pricing">价格</Link>
+          <a href="/">首页</a><a className="active" href="#create">生成</a><a href="#templates">模板</a><a href="#works">任务</a><a href="/pricing">价格</a>
         </nav>
         <div className="account-actions">
-          <button className="credit-pill" type="button"><span className="credit-dot" />{providerLabel}</button>
-          <Link className="credit-pill account-credit" href={user ? "/account" : "/auth"}>{user ? `${user.creditBalance} 积分` : "登录"}</Link>
-          <Link className="avatar-button" href={user ? "/account" : "/auth"} aria-label={user ? "账户中心" : "登录"}>{user?.displayName.slice(0, 1).toUpperCase() ?? "G"}</Link>
+          <span className="credit-pill provider-status"><span className="credit-dot" />{providerLabel}</span>
+          <a className="credit-pill account-credit" href={user ? "/account" : "/auth"} aria-label={user ? `查看账户，当前 ${user.creditBalance} 积分` : "登录账户"}>{user ? `${user.creditBalance} 积分` : "登录"}</a>
+          <a className="avatar-button" href={user ? "/account" : "/auth"} aria-label={user ? "打开账户中心" : "登录账户"}>{user?.displayName.slice(0, 1).toUpperCase() ?? "G"}</a>
         </div>
       </header>
 
@@ -321,7 +321,7 @@ export default function Home() {
         </div>
 
         <div className="preview-stage">
-          <div className="stage-toolbar"><div className="stage-title"><span className={`live-dot ${selectedTask?.status ?? "idle"}`} /><span>{selectedTask ? statusLabel(selectedTask.status) : "预览画布"}</span><span className="stage-meta">{ratio} · {duration} 秒 · {cameraMotion}</span></div><div className="stage-actions"><button type="button" aria-label="适应画布">⌗</button><button type="button" aria-label="更多操作">•••</button></div></div>
+          <div className="stage-toolbar"><div className="stage-title"><span className={`live-dot ${selectedTask?.status ?? "idle"}`} /><span>{selectedTask ? statusLabel(selectedTask.status) : "预览画布"}</span><span className="stage-meta">{ratio} · {duration} 秒 · {cameraMotion}</span></div></div>
           <div className="canvas-area">
             {selectedTask?.status === "succeeded" && selectedTask.outputUrl ? (
               <div className={`video-frame ratio-${selectedTask.aspectRatio.replace(":", "-")}`}><video src={selectedTask.outputUrl} controls autoPlay loop muted playsInline /><div className="result-badge">生成结果 · {selectedTask.model}</div></div>
@@ -358,7 +358,7 @@ export default function Home() {
         ))}</div> : <div className="empty-tasks"><strong>还没有生成任务</strong><span>创建第一条任务后，排队、进度和结果都会保存在这里。</span></div>}
       </section>
 
-      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CREDITS & BILLING</p><h2>账号、积分和支付已经接入</h2></div><p>登录用户可以保存素材和任务，生成前预扣积分，失败后自动退回。订阅会员后每月获得积分，可通过 Creem 或 Stripe 管理付款。</p><Link href="/pricing">查看会员方案 ↗</Link></section>
+      <section className="core-boundary" id="pricing"><div><p className="eyebrow">CREDITS & BILLING</p><h2>账号、积分和支付已经接入</h2></div><p>登录用户可以保存素材和任务，生成前预扣积分，失败后自动退回。订阅会员后每月获得积分，可通过 Creem 或 Stripe 管理付款。</p><a href="/pricing">查看会员方案 ↗</a></section>
       <footer className="site-footer"><a className="brand" href="#top"><span className="brand-mark">Y</span><span>映作</span></a><p>核心功能开发版</p><span>CORE V0.2</span></footer>
     </main>
   );

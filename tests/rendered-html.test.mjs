@@ -145,3 +145,33 @@ test("reconciles a verified Creem checkout when the customer returns", async () 
   assert.match(reconciliation, /reconcileSubscriptionCredits/);
   assert.match(creem, /\/v1\/checkouts\?checkout_id=/);
 });
+
+test("keeps every cross-page navigation target reachable with full page links", async () => {
+  const pagePaths = ["/", "/studio", "/pricing", "/auth", "/account"];
+  const responses = await Promise.all(pagePaths.map((pathname) => render(pathname)));
+  for (let index = 0; index < responses.length; index += 1) {
+    assert.equal(responses[index].status, 200, `${pagePaths[index]} should render`);
+  }
+
+  const [studio, pricing, auth, account] = await Promise.all([
+    readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/pricing/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/account/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  for (const source of [studio, pricing, auth, account]) {
+    assert.doesNotMatch(source, /from "next\/link"/);
+  }
+  assert.match(studio, /<a href="\/">首页<\/a>/);
+  assert.match(studio, /<a href="\/pricing">价格<\/a>/);
+  assert.match(studio, /href=\{user \? "\/account" : "\/auth"\}/);
+  assert.match(pricing, /<a href="\/">首页<\/a>/);
+  assert.match(pricing, /<a href="\/studio">工作台<\/a>/);
+  assert.match(pricing, /<a href="\/account">账户<\/a>/);
+  assert.match(account, /<a href="\/">首页<\/a>/);
+  assert.match(account, /<a href="\/studio">工作台<\/a>/);
+  assert.match(account, /<a href="\/pricing">会员方案<\/a>/);
+  assert.match(auth, /URLSearchParams\(window\.location\.search\)/);
+  assert.match(auth, /get\("mode"\) === "register"/);
+});

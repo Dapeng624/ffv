@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+/* eslint-disable @next/next/no-html-link-for-pages -- Full page navigation is more reliable on the Cloudflare vinext deployment. */
+
 import { useEffect, useState } from "react";
 
 type MembershipPlan = {
@@ -71,8 +72,8 @@ export default function PricingPage() {
   return (
     <main className="billing-page">
       <header className="simple-nav">
-        <Link className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
-        <nav><Link href="/studio">工作台</Link><Link href="/account">账户</Link></nav>
+        <a className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></a>
+        <nav><a href="/">首页</a><a href="/studio">工作台</a><a href="/account">账户</a></nav>
       </header>
       <section className="billing-hero">
         <p className="eyebrow">MEMBERSHIP</p>

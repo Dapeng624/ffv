@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useState } from "react";
+/* eslint-disable @next/next/no-html-link-for-pages -- Full page navigation is more reliable on the Cloudflare vinext deployment. */
+
+import { FormEvent, useEffect, useState } from "react";
 
 type Mode = "login" | "register";
 
@@ -12,6 +13,15 @@ export default function AuthPage() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get("mode") === "register") {
+        setMode("register");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +45,7 @@ export default function AuthPage() {
 
   return (
     <main className="auth-page">
-      <Link className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
+      <a className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></a>
       <section className="auth-panel">
         <div>
           <p className="eyebrow">ACCOUNT</p>

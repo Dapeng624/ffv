@@ -54,7 +54,7 @@ export default function Home() {
       <header className="benchmark-nav">
         <a className="benchmark-brand" href="#top" aria-label="映作首页"><span>Y</span><strong>映作</strong><small>YINGZO</small></a>
         <nav aria-label="网站导航"><a className="active" href="#top">首页</a><a href="#advantages">特效</a><a href="#technology">技术</a><a href="#workflow">流程</a><a href="#capabilities">能力</a><a href="#membership">会员</a><a href="#faq">常见问题</a></nav>
-        <div className="benchmark-nav-actions"><a href="/pricing">价格</a><a href="/auth">登录</a><button type="button" title="切换主题" aria-label="切换主题">☼</button><button type="button" title="切换语言" aria-label="切换语言">中</button></div>
+        <div className="benchmark-nav-actions"><a href="/pricing">价格</a><a href="/auth">登录</a><span className="nav-indicator" title="当前为浅色主题">☼</span><span className="nav-indicator" title="当前语言：中文">中</span></div>
       </header>
 
       <div className="benchmark-promo">AI 视频生成平台：把文字和图片转化为电影感视频 <a href="/auth?mode=register">免费体验</a></div>
