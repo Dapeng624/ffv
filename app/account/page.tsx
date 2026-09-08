@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+/* eslint-disable @next/next/no-html-link-for-pages -- Account navigation uses full loads to avoid failed production RSC transitions. */
+
 import { useEffect, useState } from "react";
 
 type User = { email: string; displayName: string; creditBalance: number };
@@ -108,7 +109,7 @@ export default function AccountPage() {
           <h1>请先登录</h1>
           <p>登录后可以查看积分余额、支付记录和生成任务。</p>
           {error && <p className="form-error">{error}</p>}
-          <Link className="auth-link-button" href="/auth">去登录</Link>
+          <a className="auth-link-button" href="/auth">去登录</a>
         </section>
       </main>
     );
@@ -124,7 +125,7 @@ export default function AccountPage() {
           <p className="eyebrow">BALANCE</p>
           <h1>{loading ? "..." : user?.creditBalance ?? 0}</h1>
           <span>当前可用积分</span>
-          <Link href="/pricing">查看会员方案</Link>
+          <a href="/pricing">查看会员方案</a>
         </article>
         <article className="membership-card">
           <p className="eyebrow">MEMBERSHIP</p>
@@ -148,7 +149,7 @@ export default function AccountPage() {
           ) : (
             <>
               <p>注册赠送积分用完后，可订阅会员获得每月积分。</p>
-              <Link className="membership-link" href="/pricing">选择会员方案</Link>
+              <a className="membership-link" href="/pricing">选择会员方案</a>
             </>
           )}
         </article>
@@ -181,8 +182,8 @@ export default function AccountPage() {
 function AccountNavigation() {
   return (
     <header className="simple-nav">
-      <Link className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></Link>
-      <nav><Link href="/">首页</Link><Link href="/studio">工作台</Link><Link href="/pricing">会员方案</Link></nav>
+      <a className="brand" href="/"><span className="brand-mark">Y</span><span>映作</span><small>YINGZO</small></a>
+      <nav><a href="/">首页</a><a href="/studio">工作台</a><a href="/pricing">会员方案</a></nav>
     </header>
   );
 }
