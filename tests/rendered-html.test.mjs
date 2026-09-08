@@ -175,3 +175,21 @@ test("keeps every cross-page navigation target reachable with full page links", 
   assert.match(auth, /URLSearchParams\(window\.location\.search\)/);
   assert.match(auth, /get\("mode"\) === "register"/);
 });
+
+test("persists the session across the site and reflects it in the home navigation", async () => {
+  const [home, accountActions, auth] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/home-account-actions.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/auth.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(home, /<HomeAccountActions \/>/);
+  assert.match(accountActions, /fetch\("\/api\/me", \{ cache: "no-store", credentials: "same-origin" \}\)/);
+  assert.match(accountActions, /window\.addEventListener\("pageshow", handlePageShow\)/);
+  assert.match(accountActions, /user\.creditBalance} 积分/);
+  assert.match(accountActions, /href="\/account"/);
+  assert.match(accountActions, /href="\/auth"/);
+  assert.match(auth, /const SESSION_DAYS = 30/);
+  assert.match(auth, /Path=\//);
+  assert.match(auth, /HttpOnly/);
+});

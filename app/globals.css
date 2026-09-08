@@ -1558,6 +1558,16 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
 .benchmark-nav > nav a.active { color: #6840cc; border-bottom-color: #7444df; }
 .benchmark-nav-actions { display: flex; align-items: center; gap: 14px; }
 .benchmark-nav-actions > a:first-child { color: #6840cc; font-weight: 800; }
+.benchmark-account-loading { min-width: 30px; color: #8b8c96; font-size: 12px; }
+.benchmark-nav-actions .benchmark-account-credit {
+  height: 32px; padding: 0 11px; display: inline-flex; align-items: center;
+  color: #5b3977; border: 1px solid #dfd3ef; border-radius: 16px;
+  background: #f8f4fc; font-size: 11px; font-weight: 750;
+}
+.benchmark-nav-actions .benchmark-account-avatar {
+  width: 32px; height: 32px; display: inline-grid; place-items: center;
+  color: #fff; border-radius: 50%; background: #7444df; font-size: 11px; font-weight: 850;
+}
 .benchmark-nav-actions .nav-indicator {
   width: 30px; height: 30px; padding: 0; display: grid; place-items: center;
   color: #22232d; font-size: 15px;
@@ -1689,8 +1699,8 @@ textarea:hover, textarea:focus { border-color: var(--border-strong); }
 @media (max-width: 780px) {
   .benchmark-nav { height: 58px; grid-template-columns: 1fr auto; padding: 0 14px; }
   .benchmark-nav > nav { display: none; }
-  .benchmark-brand small,.benchmark-nav-actions > a:first-child,.benchmark-nav-actions .nav-indicator { display: none; }
-  .benchmark-nav-actions > a { height: 34px; padding: 0 11px; display: inline-flex; align-items: center; color: #fff; border-radius: 6px; background: #7444df; }
+  .benchmark-brand small,.benchmark-price-link,.benchmark-account-credit,.benchmark-account-loading,.benchmark-nav-actions .nav-indicator { display: none; }
+  .benchmark-nav-actions .benchmark-login-link { height: 34px; padding: 0 11px; display: inline-flex; align-items: center; color: #fff; border-radius: 6px; background: #7444df; }
   .benchmark-promo { min-height: 48px; justify-content: space-between; font-size: 10px; }
   .benchmark-hero { min-height: 470px; padding: 56px 12px 0; }
   .benchmark-hero h1 { font-size: 42px; }

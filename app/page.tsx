@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- Editorial imagery supports the product showcase. */
 
+import HomeAccountActions from "@/app/components/home-account-actions";
+
 const media = {
   technology: "https://images.unsplash.com/photo-1636918191572-c2e64186d918?auto=format&fit=crop&w=1400&q=86",
   portrait: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=86",
@@ -54,7 +56,7 @@ export default function Home() {
       <header className="benchmark-nav">
         <a className="benchmark-brand" href="#top" aria-label="映作首页"><span>Y</span><strong>映作</strong><small>YINGZO</small></a>
         <nav aria-label="网站导航"><a className="active" href="#top">首页</a><a href="#advantages">特效</a><a href="#technology">技术</a><a href="#workflow">流程</a><a href="#capabilities">能力</a><a href="#membership">会员</a><a href="#faq">常见问题</a></nav>
-        <div className="benchmark-nav-actions"><a href="/pricing">价格</a><a href="/auth">登录</a><span className="nav-indicator" title="当前为浅色主题">☼</span><span className="nav-indicator" title="当前语言：中文">中</span></div>
+        <HomeAccountActions />
       </header>
 
       <div className="benchmark-promo">AI 视频生成平台：把文字和图片转化为电影感视频 <a href="/auth?mode=register">免费体验</a></div>
